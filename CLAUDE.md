@@ -7,31 +7,44 @@ Test scripts and data pipelines for running SuperDec on Aria Synthetic Environme
 ## Documentation
 
 - [docs/project_structure.md](docs/project_structure.md) — full project layout, data flow, and format reference
+- **Keep docs up to date** — when changing scripts, data paths, or pipeline steps, update both this file and `docs/project_structure.md`.
 
 ## Quick Pipeline
 
 ```bash
 # 1. Download ASE scenes
-python ase_downloader.py --set train --scene-ids 0-2 \
+python ase_downloader.py --set train --scene-ids 0-9 \
   --cdn-file aria_synthetic_environments_dataset_download_urls.json \
   --output-dir data/ase --unzip True
 
-# 2. Extract per-object point clouds
-python extract_pointclouds.py --wai_path data/ase/0 --frame_stride 5
+# 2. Convert to WAI format (shared with map-anything pipeline)
+python scripts/convert_ase_to_wai.py --scene_path data/ase/0 --output_path data/wai/0
 
-# 3. Copy to superdec and run inference (needs GPU via Slurm)
-cp data/pointclouds/0/*.npz ../superdec/data/ase_scene_0/pc_gt/
-srun --account=3dv --gpus=1 --mem=24G --time=00:10:00 bash -c \
-  'source ~/envs/3dv/bin/activate && export CUDA_HOME=/cluster/data/cuda/x86_64/13.0.2 && \
-   export PATH=$CUDA_HOME/bin:$PATH && cd /work/courses/3dv/team39/superdec && \
-   python superdec/evaluate/to_npz.py checkpoints_folder="checkpoints/normalized" \
-   output_dir="/work/courses/3dv/team39/superdec_tests/data/output_npz" \
-   dataset=scene scene.path="data" scene.name="ase_scene_0" scene.z_up=true scene.gt=true \
-   dataloader.batch_size=32 dataloader.num_workers=2 device=cuda'
+# 3. Extract per-object point clouds from WAI
+python scripts/extract_pointclouds.py --wai_path data/wai/0 --output_path data/pointclouds/0 --frame_stride 5
+
+# 4. Run SuperDec inference (needs GPU via Slurm)
+# Copy point clouds, then run to_npz.py (see run_all.sh)
+
+# Or just run the full pipeline on all scenes:
+sbatch run_all.sh
+```
+
+## Visualization
+
+```bash
+# Export GLB (viewable in VS Code or browser)
+python scripts/export_meshes.py data/output_npz/ase_scene_0.npz scene_0.glb
+
+# Interactive viser viewer (needs GPU node + port forwarding)
+srun --account=3dv --gpus=1 --mem=24G --time=01:00:00 --pty bash
+cd /work/courses/3dv/team39/superdec && python superdec/visualization/object_visualizer.py \
+  dataset=scene split="ase_scene_0" npz_folder="/work/courses/3dv/team39/superdec_tests/data/output_npz"
 ```
 
 ## Notes
 
-- `convert_ase_to_wai.py` is TA-provided for the **map-anything** pipeline (WAI format), not needed for superdec
-- `extract_pointclouds.py` works directly on raw ASE data (depth + instance masks)
+- WAI conversion is the first step — shared intermediate format for both superdec and map-anything
+- `extract_pointclouds.py` works on WAI data (depth + instance masks -> per-object point clouds)
 - SuperDec expects `.npz` files with key `points` (float32, `[N, 3]`, N >= 4096)
+- `run_all.sh` runs the full pipeline (WAI conversion -> point cloud extraction -> inference -> GLB export)

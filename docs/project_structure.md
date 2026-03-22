@@ -24,7 +24,7 @@ team39/
 │   │   ├── normalized/        # For scene-level inference (ckpt.pt)
 │   │   └── shapenet/          # For single-object inference (ckpt.pt)
 │   ├── data/                  # Input data for superdec
-│   │   └── ase_scene_0/       # ASE scene (created by our pipeline)
+│   │   └── ase_scene_N/       # ASE scenes (created by our pipeline)
 │   │       └── pc_gt/         # Per-object point clouds (.npz)
 │   ├── scripts/               # download_checkpoints.sh, run_on_scene.sh
 │   ├── demo_viser.py          # Interactive single-object demo
@@ -34,20 +34,24 @@ team39/
     ├── CLAUDE.md              # Local LLM instructions
     ├── docs/                  # Documentation (this folder)
     │   └── project_structure.md
+    ├── scripts/               # Pipeline scripts
+    │   ├── convert_ase_to_wai.py  # TA-provided: ASE → WAI format
+    │   ├── extract_pointclouds.py # WAI → per-object point clouds (.npz)
+    │   └── export_meshes.py       # SuperDec output → .glb for viewing
     │
     ├── test_superdec.py       # Unit tests (imports, forward pass, normalization)
-    ├── extract_pointclouds.py # ASE → per-object point clouds (.npz)
-    ├── convert_ase_to_wai.py  # TA-provided: ASE → WAI format (for map-anything)
     ├── ase_downloader.py      # ASE dataset downloader (from projectaria_tools)
-    ├── run_superdec_ase.sh    # Slurm script for superdec inference
+    ├── run_all.sh             # Full pipeline Slurm job (WAI → pointclouds → inference → GLB)
+    ├── run_superdec_ase.sh    # Slurm script for superdec inference only
     │
     ├── *.json                 # ASE download URL files (CDN, ATEK, mesh)
     │
     └── data/                  # (gitignored)
         ├── ase/               # Raw ASE scenes (rgb/, depth/, instances/, ...)
-        ├── wai/               # WAI-converted scenes (for map-anything, not superdec)
+        ├── wai/               # WAI-converted scenes (shared with map-anything)
         ├── pointclouds/       # Extracted per-object point clouds
-        └── output_npz/        # SuperDec inference results
+        ├── output_npz/        # SuperDec inference results
+        └── output_glb/        # Exported GLB meshes for visualization
 ```
 
 ## Data Flow
@@ -55,15 +59,17 @@ team39/
 ```
 ASE scene (rgb, depth, instances, trajectory)
     │
-    ├──→ convert_ase_to_wai.py ──→ WAI format (for map-anything pipeline)
-    │
-    └──→ extract_pointclouds.py ──→ per-object .npz (4096 pts each)
+    └──→ convert_ase_to_wai.py ──→ WAI format (undistorted pinhole + depth + instances)
                                         │
-                                        └──→ superdec/evaluate/to_npz.py
-                                                │
-                                                └──→ output .npz with superquadric params
-                                                     (scale, rotation, translation,
-                                                      exponents, existence, assignment)
+                                        ├──→ extract_pointclouds.py ──→ per-object .npz (4096 pts each)
+                                        │                                    │
+                                        │                                    └──→ superdec/evaluate/to_npz.py
+                                        │                                            │
+                                        │                                            └──→ output .npz with superquadric params
+                                        │                                                 │
+                                        │                                                 └──→ export_meshes.py ──→ .glb
+                                        │
+                                        └──→ map-anything (future)
 ```
 
 ## Key Formats
@@ -71,6 +77,7 @@ ASE scene (rgb, depth, instances, trajectory)
 | Format | Description | Used by |
 |--------|-------------|---------|
 | ASE raw | Fisheye RGB + uint16 depth + uint16 instances + trajectory.csv | Source data |
-| WAI | Undistorted pinhole images + EXR depth + scene_meta.json | map-anything |
-| Point cloud NPZ | `points` key, float32 `[N, 3]`, N≥4096 | SuperDec input |
+| WAI | Undistorted pinhole images + EXR depth + scene_meta.json | Shared intermediate (superdec + map-anything) |
+| Point cloud NPZ | `points` key, float32 `[N, 3]`, N>=4096 | SuperDec input |
 | Output NPZ | `scale`, `rotation`, `translation`, `exponents`, `exist`, `assign_matrix`, `pc`, `names` | SuperDec output |
+| GLB | 3D mesh file, viewable in VS Code or browser | Visualization |
