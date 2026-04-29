@@ -1,4 +1,4 @@
 data/
 logs/
 /*.png
-utils/results.png
+utils/results*.png
