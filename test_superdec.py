@@ -6,8 +6,8 @@ On login node (CPU-only tests):
     python test_superdec.py
 
 On compute node (all tests including GPU):
-    srun --gpus=1 --mem=24G --time=00:10:00 --pty bash -c \
-        'source ~/envs/3dv/bin/activate && python /work/courses/3dv/team39/compose/test_superdec.py'
+    srun --account=3dv --gpus=1 --mem=24G --time=00:10:00 --pty bash -c \
+        'source /work/courses/3dv/team39/envs/3dv/bin/activate && python /work/courses/3dv/team39/compose/test_superdec.py'
 """
 
 import os

@@ -30,19 +30,34 @@ team39/
 │   ├── demo_viser.py          # Interactive single-object demo
 │   └── demo_planning.py       # RRT* path planning with superquadrics
 │
-└── superdec_tests/            # Our test scripts and data pipelines
+└── compose/                   # Our test scripts and data pipelines
     ├── CLAUDE.md              # Local LLM instructions
     ├── docs/                  # Documentation (this folder)
     │   └── project_structure.md
-    ├── scripts/               # Pipeline scripts
-    │   ├── convert_ase_to_wai.py  # TA-provided: ASE → WAI format
-    │   ├── extract_pointclouds.py # WAI → per-object point clouds (.npz)
-    │   └── export_meshes.py       # SuperDec output → .glb for viewing
+    ├── scripts/               # Python pipeline / analysis scripts
+    │   ├── convert_ase_to_wai.py       # TA-provided: ASE → WAI format
+    │   ├── extract_pointclouds.py      # WAI → per-object point clouds (.npz)
+    │   ├── export_meshes.py            # SuperDec output → .glb for viewing
+    │   ├── compute_covisibility.py     # Pairwise covisibility matrices for WAI scenes
+    │   ├── covisibility_evaluation.py  # Plots covisibility-vs-step distributions
+    │   ├── covisibility_pair_examples.py  # Sample image pairs at given covisibility
+    │   ├── prepare_benchmark_data.py   # Generate metadata for map-anything benchmark
+    │   ├── render_scene_vs_superdec.py # Render side-by-side comparison images
+    │   └── viz_vggt_aria.py            # VGGT inference + viz on ASE WAI scenes
+    │
+    ├── slurm/                 # Sbatch wrappers (submit from compose/)
+    │   ├── run_all.sh            # Full pipeline (WAI → pointclouds → inference → GLB)
+    │   ├── run_superdec_ase.sh   # SuperDec inference on a single scene
+    │   ├── run_benchmark_prep.sh # Scene metadata + covisibility (prep step)
+    │   ├── run_benchmark.sh      # Dense N-view VGGT benchmark on ASE
+    │   └── run_vggt_viz.sh       # VGGT viz job
+    │
+    ├── utils/                 # Helpers
+    │   ├── ase_downloader.py     # ASE dataset downloader (from projectaria_tools)
+    │   ├── npy_to_csv.py
+    │   └── plot_results.py
     │
     ├── test_superdec.py       # Unit tests (imports, forward pass, normalization)
-    ├── ase_downloader.py      # ASE dataset downloader (from projectaria_tools)
-    ├── run_all.sh             # Full pipeline Slurm job (WAI → pointclouds → inference → GLB)
-    ├── run_superdec_ase.sh    # Slurm script for superdec inference only
     │
     ├── *.json                 # ASE download URL files (CDN, ATEK, mesh)
     │
@@ -50,6 +65,9 @@ team39/
         ├── ase/               # Raw ASE scenes (rgb/, depth/, instances/, ...)
         ├── wai/               # WAI-converted scenes (shared with map-anything)
         ├── pointclouds/       # Extracted per-object point clouds
+        ├── dataset_metadata/  # Scene lists + covisibility for benchmark
+        ├── covisibility_analysis/  # Covisibility figures and example pairs
+        ├── compare/           # VGGT viz outputs
         ├── output_npz/        # SuperDec inference results
         └── output_glb/        # Exported GLB meshes for visualization
 ```

@@ -27,7 +27,7 @@ python scripts/extract_pointclouds.py --wai_path data/wai/0 --output_path data/p
 # Copy point clouds, then run to_npz.py (see run_all.sh)
 
 # Or just run the full pipeline on all scenes:
-sbatch run_all.sh
+sbatch slurm/run_all.sh
 ```
 
 ## Visualization
@@ -42,9 +42,17 @@ cd /work/courses/3dv/team39/superdec && python superdec/visualization/object_vis
   dataset=scene split="ase_scene_0" npz_folder="/work/courses/3dv/team39/compose/data/output_npz"
 ```
 
+## Layout
+
+- `scripts/` — Python pipeline + analysis scripts (conversion, extraction, export, covisibility, viz).
+- `slurm/` — Sbatch wrappers; submit from `compose/` so log paths resolve to `compose/logs/`.
+- `utils/` — Helpers (ASE downloader, plotting).
+- `data/` — gitignored. Subfolders: `ase/`, `wai/`, `pointclouds/`, `output_npz/`, `output_glb/`, `dataset_metadata/`, `covisibility_analysis/`, `compare/`.
+
 ## Notes
 
 - WAI conversion is the first step — shared intermediate format for both superdec and map-anything
 - `extract_pointclouds.py` works on WAI data (depth + instance masks -> per-object point clouds)
 - SuperDec expects `.npz` files with key `points` (float32, `[N, 3]`, N >= 4096)
-- `run_all.sh` runs the full pipeline (WAI conversion -> point cloud extraction -> inference -> GLB export)
+- `slurm/run_all.sh` runs the full pipeline (WAI conversion -> point cloud extraction -> inference -> GLB export)
+- All sbatch wrappers source the shared team venv at `/work/courses/3dv/team39/envs/3dv` and set `CUDA_HOME=/cluster/data/cuda/x86_64/13.0.2`. Don't combine `--gpus` with `--cpus-per-task` — Slurm rejects it (CPU count defaults to 2).
