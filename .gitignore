@@ -1,0 +1,66 @@
+# =============================================================================
+# Vendored frameworks — tracked upstream, not in our history.
+# Each has its own .git subdir; edits go in their respective repos.
+# =============================================================================
+/map-anything/
+/mast3r/
+/superdec/
+
+# =============================================================================
+# Heavy / regenerable artifacts
+# =============================================================================
+# Python venv (~9 GB, lives in team folder by convention — see CLUSTER.md)
+/envs/
+# Pre-built native libs shipped alongside the Python env
+/lib/
+# Model weights — store on disk, never in git (~10 GB)
+checkpoints/
+# Slurm logs and stray sbatch output files
+/logs/
+slurm-*.out
+
+# =============================================================================
+# Build artifacts (CMake, Python extensions, packaging metadata)
+# =============================================================================
+build/
+*.so
+*.pyd
+*.egg-info/
+__pycache__/
+*.py[cod]
+.cmake/
+
+# =============================================================================
+# Datasets & generated outputs (regen via the pipeline; never commit)
+# =============================================================================
+data/
+*.npz
+*.glb
+*.exr
+*.sif
+*.ckpt
+*.pth
+*.pt
+
+# Stray top-level result/intermediate images
+/results.png
+
+# =============================================================================
+# IDE / editor / OS scratch
+# =============================================================================
+.vscode/
+.idea/
+.claude/
+.DS_Store
+*.swp
+*.swo
+
+# Mac-style accidental file duplicates ("foo copy.cpp" etc.)
+* copy.*
+* copy
+
+# =============================================================================
+# Stray course-material checkpoint that ended up under ba/checkpoints/
+# (different project, has its own .git inside)
+# =============================================================================
+/ba/checkpoints/
