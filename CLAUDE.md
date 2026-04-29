@@ -1,6 +1,6 @@
 See [../CLAUDE.md](../CLAUDE.md) for cluster usage guidelines.
 
-# superdec_tests
+# compose
 
 Test scripts and data pipelines for running SuperDec on Aria Synthetic Environments (ASE) scenes.
 
@@ -39,7 +39,7 @@ python scripts/export_meshes.py data/output_npz/ase_scene_0.npz scene_0.glb
 # Interactive viser viewer (needs GPU node + port forwarding)
 srun --account=3dv --gpus=1 --mem=24G --time=01:00:00 --pty bash
 cd /work/courses/3dv/team39/superdec && python superdec/visualization/object_visualizer.py \
-  dataset=scene split="ase_scene_0" npz_folder="/work/courses/3dv/team39/superdec_tests/data/output_npz"
+  dataset=scene split="ase_scene_0" npz_folder="/work/courses/3dv/team39/compose/data/output_npz"
 ```
 
 ## Notes

@@ -9,9 +9,9 @@
 
 export CUDA_HOME=/cluster/data/cuda/x86_64/13.0.2
 export PATH=$CUDA_HOME/bin:$PATH
-source ~/envs/3dv/bin/activate
+source /work/courses/3dv/team39/envs/3dv/bin/activate
 
-cd /work/courses/3dv/team39/superdec_tests
+cd /work/courses/3dv/team39/compose
 
 # Step 1: Convert raw ASE scenes to WAI format
 echo "=== Step 1: ASE -> WAI conversion ==="
@@ -53,10 +53,10 @@ for i in $(seq 0 9); do
     cd "$SUPERDEC"
     python superdec/evaluate/to_npz.py \
         checkpoints_folder="checkpoints/normalized" \
-        output_dir="/work/courses/3dv/team39/superdec_tests/data/output_npz" \
+        output_dir="/work/courses/3dv/team39/compose/data/output_npz" \
         dataset=scene scene.path="data" scene.name="$scene_name" scene.z_up=true scene.gt=true \
         dataloader.batch_size=32 dataloader.num_workers=2 device=cuda
-    cd /work/courses/3dv/team39/superdec_tests
+    cd /work/courses/3dv/team39/compose
 done
 
 # Step 4: Export GLB files for visualization
