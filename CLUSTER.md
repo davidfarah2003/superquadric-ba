@@ -124,6 +124,47 @@ export PATH=$CUDA_HOME/bin:$PATH
 export LD_LIBRARY_PATH=$CUDA_HOME/lib:$LD_LIBRARY_PATH
 ```
 
+### C++ build deps for `ba/` (Ceres + SuiteSparse + glog + …)
+
+The `ba/` Ceres-based BA package builds against a team-shared CMake prefix at
+`/work/courses/3dv/team39/envs/3dv-cmake-prefix/usr` populated from the Ubuntu
+24.04 (`noble`) `libceres-dev` / `libeigen3-dev` / `libsuitesparse-dev` /
+`libglog-dev` / `libgflags-dev` / `libabsl-dev` / `libmetis-dev` /
+`libunwind-dev` apt packages plus their matching runtime `.so` packages. All
+shared libs in the prefix have a `RUNPATH` patched in (via `patchelf`) so the
+resulting `ba` extensions resolve their transitive deps without
+`LD_LIBRARY_PATH`.
+
+The legacy `team39/lib/libceres.so.4` is a conda build with `libglog.so.2`,
+incompatible with the `libglog.so.1` in the prefix. The CMakeLists pins the
+prefix first in `CMAKE_INSTALL_RPATH` so the apt build wins at runtime.
+
+Rebuild from scratch:
+
+```bash
+cd /work/courses/3dv/team39/ba && rm -rf build && mkdir build && cd build
+cmake .. && cmake --build . -j$(nproc)
+```
+
+If you ever need to refresh the dev prefix (e.g. after a security update on
+the noble repos):
+
+```bash
+WORK=/work/scratch/$USER/ceres-build
+mkdir -p "$WORK" && cd "$WORK"
+apt-get download libceres-dev libeigen3-dev libgflags-dev libgoogle-glog-dev \
+    libsuitesparse-dev libmetis-dev libabsl-dev libcxsparse4 libunwind-dev \
+    libgflags2.2 libgoogle-glog0v6t64 libabsl20220623t64 libceres4t64 \
+    libcholmod5 libamd3 libcamd3 libccolamd3 libcolamd3 libspqr4 \
+    libsuitesparseconfig7 libunwind8 libmetis5
+PREFIX=/work/courses/3dv/team39/envs/3dv-cmake-prefix
+for d in *.deb; do dpkg-deb -x "$d" "$PREFIX"; done
+RUNPATH="$PREFIX/usr/lib/x86_64-linux-gnu:/work/courses/3dv/team39/lib"
+for so in $(find "$PREFIX/usr/lib" -maxdepth 1 -type f -name "*.so*"); do
+    /work/courses/3dv/team39/envs/3dv/bin/patchelf --set-rpath "$RUNPATH" "$so" 2>/dev/null
+done
+```
+
 ### Python venv
 
 The team uses a **single shared venv** at `/work/courses/3dv/team39/envs/3dv` (~9.4 GB). Activating it from any team member's session works the same way:
@@ -198,9 +239,9 @@ When assisting with this project on the cluster:
 
 ### Sparse View Benchmarking
 - For sparse view benchmarking, use the `pi3.sh`, `mapa_24v.sh` and `vggt.sh` scripts in the `map-anything/bash_scripts/benchmark/sparse_view/` folder.
-- Here, you should pass the `sparse_covisibility_thres` parameter to the script to select the threshold for sampling sparse views. The default value is 0.25. If you want to use Bundle Adjustment or SuperBundle specify the `bundle_adjustment` parameter. Example:
+- You must specify the number of views per datapoint. If you want to use Bundle Adjustment or SuperBundle specify the `bundle_adjustment` parameter. Example:
   ```bash
-  sbatch map-anything/bash_scripts/benchmark/sparse_view/vggt.sh sparse_covisibility_thres=0.05 no_of_datapoints=100 bundle_adjustment=superbundle
+  sbatch map-anything/bash_scripts/benchmark/sparse_view/vggt.sh num_views=4 no_of_datapoints=100 bundle_adjustment=superbundle
   ```
 - The script will use this threshold both for the experiment and to set the output directory.
 

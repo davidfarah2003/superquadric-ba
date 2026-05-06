@@ -67,13 +67,24 @@ def run_bundle_adjustment_custom(cameras, points, observations,
                                  fix_first_camera=True,
                                  huber_threshold=2.0,
                                  verbose=False,
-                                 fix_points=False):
-    """Run custom Ceres BA. All arrays are modified **in place**."""
+                                 fix_points=False,
+                                 sq_params=None,
+                                 point_to_sq=None,
+                                 lambda_surface=0.0,
+                                 surface_huber=0.0):
+    """Run custom Ceres BA. All arrays are modified **in place**.
+
+    Surface-residual mode is engaged when ``lambda_surface > 0`` and both
+    ``sq_params`` (K, 11) and ``point_to_sq`` (num_points,) are supplied.
+    See ``ba.superdec.pack_for_ceres`` for the expected sq_params layout.
+    """
     core = _load_core("custom_ba_core")
     return core.run_bundle_adjustment(cameras, points, observations,
                                       cam_indices, pt_indices,
                                       fix_first_camera, huber_threshold,
-                                      verbose, fix_points)
+                                      verbose, fix_points,
+                                      sq_params, point_to_sq,
+                                      lambda_surface, surface_huber)
 
 
 # ---------------------------------------------------------------------------
@@ -551,7 +562,12 @@ def mast3r_bundle_adjust(
         fix_first_camera: bool = True,
         huber_threshold: float = 2.0,
         verbose: bool = False,
-        align_to_gt: bool = False):
+        align_to_gt: bool = False,
+        max_frames: int = None,
+        superdec_npz_path: str | None = None,
+        lambda_surface: float = 0.0,
+        surface_huber: float = 0.0,
+        assoc_max_distance: float = 0.15):
     """
     Refine VGGT-predicted poses with Ceres BA, using MASt3R as feature matcher.
 
@@ -580,6 +596,20 @@ def mast3r_bundle_adjust(
     huber_threshold  : Huber loss delta in pixels (custom backend only)
     verbose        : print per-pair match counts and Ceres summary
     align_to_gt    : after BA, align refined cameras to GT via Sim3 (needs pycolmap)
+    max_frames     : if set, subsample views at stride 15 down to this many frames
+                     before running MASt3R inference, capping the O(N²) pair count.
+                     Writes refined poses back into the original preds in-place.
+
+    Surface-augmented BA (optional):
+    superdec_npz_path  : path to a SUPERDEC scene NPZ. When set together with
+                         lambda_surface > 0, each triangulated 3-D point is
+                         associated to its nearest SQ surface (within
+                         assoc_max_distance) and a radial-distance residual is
+                         added to the Ceres problem.
+    lambda_surface     : pixels-per-meter weight on the surface residual.
+    surface_huber      : Huber delta in pixel-equivalent units (<=0 disables).
+    assoc_max_distance : drop points whose nearest-SQ radial distance exceeds
+                         this threshold (meters). Default 0.15 m.
 
     Returns
     -------
@@ -587,6 +617,17 @@ def mast3r_bundle_adjust(
     pts3d is NOT modified (no dense pointmap available for matched structure).
     """
     import torch as _torch
+    use_surface = (superdec_npz_path is not None) and (lambda_surface > 0.0)
+    if use_surface and backend != "custom":
+        raise ValueError("Surface residual requires backend='custom'.")
+    if use_surface:
+        from .superdec import (load_scene, transform_sqs, invert_sim3,
+                               umeyama_sim3_pred_to_world,
+                               assign_points_to_sqs, pack_for_ceres)
+        sq_world = load_scene(superdec_npz_path)
+        if verbose:
+            print(f"[mast3r_BA/surface] loaded {len(sq_world['scale'])} SQs from "
+                  f"{superdec_npz_path}")
 
     # Import only from fast_nn to avoid pulling in sparse_ga (which needs roma).
     try:
@@ -649,6 +690,15 @@ def mast3r_bundle_adjust(
 
     batch_size = preds[0]["cam_quats"].shape[0]
     n_views    = len(preds)
+
+    if max_frames is not None and n_views > max_frames:
+        selected = list(range(0, n_views, 15))[:max_frames]
+        if verbose:
+            print(f"[mast3r_BA] max_frames={max_frames}: using {len(selected)}/{n_views} "
+                  f"views at stride 15 → {len(selected)*(len(selected)-1)//2} pairs")
+        preds  = [preds[i]  for i in selected]
+        batch  = [batch[i]  for i in selected]
+        n_views = len(preds)
 
     img_shape  = batch[0]["img"].shape           # (B, C, H, W)
     H_img, W_img = int(img_shape[-2]), int(img_shape[-1])
@@ -850,6 +900,32 @@ def mast3r_bundle_adjust(
             print(f"[mast3r_BA] b={b}: total {len(points)} 3-D pts, "
                   f"{len(observations)} obs — running Ceres ({backend})")
 
+        # --- Optional: bring SQs from world frame into predicted-world frame
+        # via Sim3 fitted from GT camera centres -> predicted camera centres,
+        # then build (point -> SQ) associations on the BA point cloud. ---
+        sq_params_arg = None
+        point_to_sq_arg = None
+        if use_surface:
+            gt_centres = np.stack([batch[v]["camera_pose"][b].cpu().numpy()[:3, 3]
+                                   for v in range(n_views)], axis=0)
+            sim3_p2g = umeyama_sim3_pred_to_world(cam_centres, gt_centres)
+            if sim3_p2g is None:
+                if verbose:
+                    print(f"[mast3r_BA/surface] b={b}: degenerate Sim3 — "
+                          "skipping surface term for this element")
+            else:
+                sim3_g2p = invert_sim3(sim3_p2g)
+                sq_pred = transform_sqs(sq_world, sim3_g2p)
+                point_to_sq_arg, dists = assign_points_to_sqs(
+                    points, sq_pred, max_distance=assoc_max_distance)
+                sq_params_arg, _ = pack_for_ceres(sq_pred)
+                if verbose:
+                    n_assigned = int((point_to_sq_arg >= 0).sum())
+                    print(f"[mast3r_BA/surface] b={b}: assigned "
+                          f"{n_assigned}/{len(points)} points to SQs "
+                          f"(median dist {np.median(dists)*1000:.1f} mm, "
+                          f"threshold {assoc_max_distance*1000:.0f} mm)")
+
         # --- Solve BA ---
         if backend == "baseline":
             final_cost, iters = run_bundle_adjustment_baseline(
@@ -857,8 +933,14 @@ def mast3r_bundle_adjust(
         elif backend == "custom":
             final_cost, iters = run_bundle_adjustment_custom(
                 cameras, points, observations, cam_indices, pt_indices,
-                fix_first_camera, huber_threshold, verbose,
-                False)   # fix_points=False — refine structure jointly
+                fix_first_camera=fix_first_camera,
+                huber_threshold=huber_threshold,
+                verbose=verbose,
+                fix_points=False,    # refine structure jointly
+                sq_params=sq_params_arg,
+                point_to_sq=point_to_sq_arg,
+                lambda_surface=lambda_surface if use_surface else 0.0,
+                surface_huber=surface_huber)
         else:
             raise ValueError(f"Unknown backend '{backend}'. Use 'baseline' or 'custom'.")
 
