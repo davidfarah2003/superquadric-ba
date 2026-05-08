@@ -563,7 +563,6 @@ def mast3r_bundle_adjust(
         huber_threshold: float = 2.0,
         verbose: bool = False,
         align_to_gt: bool = False,
-        max_frames: int = None,
         superdec_npz_path: str | None = None,
         lambda_surface: float = 0.0,
         surface_huber: float = 0.0,
@@ -596,9 +595,6 @@ def mast3r_bundle_adjust(
     huber_threshold  : Huber loss delta in pixels (custom backend only)
     verbose        : print per-pair match counts and Ceres summary
     align_to_gt    : after BA, align refined cameras to GT via Sim3 (needs pycolmap)
-    max_frames     : if set, subsample views at stride 15 down to this many frames
-                     before running MASt3R inference, capping the O(N²) pair count.
-                     Writes refined poses back into the original preds in-place.
 
     Surface-augmented BA (optional):
     superdec_npz_path  : path to a SUPERDEC scene NPZ. When set together with
@@ -690,15 +686,6 @@ def mast3r_bundle_adjust(
 
     batch_size = preds[0]["cam_quats"].shape[0]
     n_views    = len(preds)
-
-    if max_frames is not None and n_views > max_frames:
-        selected = list(range(0, n_views, 15))[:max_frames]
-        if verbose:
-            print(f"[mast3r_BA] max_frames={max_frames}: using {len(selected)}/{n_views} "
-                  f"views at stride 15 → {len(selected)*(len(selected)-1)//2} pairs")
-        preds  = [preds[i]  for i in selected]
-        batch  = [batch[i]  for i in selected]
-        n_views = len(preds)
 
     img_shape  = batch[0]["img"].shape           # (B, C, H, W)
     H_img, W_img = int(img_shape[-2]), int(img_shape[-1])
