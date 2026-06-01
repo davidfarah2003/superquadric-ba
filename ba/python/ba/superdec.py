@@ -95,10 +95,7 @@ def _radial_distance_world(points, sq) -> np.ndarray:
     R = Rotation.from_rotvec(sq["rotation_aa"]).as_matrix()        # (K, 3, 3)
     Rt = np.transpose(R, (0, 2, 1))                                # (K, 3, 3)
 
-    # Per-(N, K) translated and rotated coordinates.
-    # diff[n, k, :] = points[n] - sq.t[k]
     diff = points[:, None, :] - sq["translation"][None, :, :]      # (N, K, 3)
-    # q[n, k, :] = Rt[k] @ diff[n, k, :]
     q = np.einsum("kij,nkj->nki", Rt, diff)                        # (N, K, 3)
 
     # Numerical safeguarding (mirrors superdec.utils.safe_operations.safe_pow).
@@ -183,19 +180,6 @@ def transform_sqs(sq: dict, sim3) -> dict:
         "primitive_idx": sq["primitive_idx"].copy(),
         "names":         sq["names"],
     }
-
-
-def invert_sim3(sim3):
-    """Invert a Sim3 (s, R, t).
-
-    If the original maps `x -> s * R @ x + t`, the inverse maps
-    `y -> (1/s) * R^T @ (y - t)` = `(1/s) * R^T @ y - (1/s) * R^T @ t`.
-    """
-    s, R, t = sim3
-    s_inv = 1.0 / s
-    R_inv = R.T
-    t_inv = -s_inv * (R_inv @ t)
-    return s_inv, R_inv, t_inv
 
 
 def invert_sim3(sim3):

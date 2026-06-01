@@ -14,10 +14,6 @@ namespace py = pybind11;
 //   camera[7]     fy
 //   camera[8]     cx
 //   camera[9]     cy
-//
-// NOTE: custom_ba_core was originally a verbatim copy of baseline_ba_core.
-// It now adds an optional surface residual against frozen SUPERDEC primitives
-// for the surface-augmented BA experiments.
 struct ReprojectionError {
     ReprojectionError(double obs_x, double obs_y)
         : obs_x_(obs_x), obs_y_(obs_y) {}
@@ -373,8 +369,8 @@ py::tuple run_bundle_adjustment(
                           summary.num_successful_steps);
 }
 
-PYBIND11_MODULE(custom_ba_core, m) {
-    m.doc() = "Custom bundle adjustment using Ceres Solver";
+PYBIND11_MODULE(mast3r_sq_ba_core, m) {
+    m.doc() = "MASt3R + superquadric bundle adjustment using Ceres Solver";
     m.def("run_bundle_adjustment", &run_bundle_adjustment,
           py::arg("cameras"),
           py::arg("points"),

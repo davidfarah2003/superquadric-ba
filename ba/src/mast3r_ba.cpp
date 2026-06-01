@@ -129,8 +129,8 @@ py::tuple run_bundle_adjustment(
                           summary.num_successful_steps);
 }
 
-PYBIND11_MODULE(baseline_ba_core, m) {
-    m.doc() = "Baseline bundle adjustment using Ceres Solver";
+PYBIND11_MODULE(mast3r_ba_core, m) {
+    m.doc() = "MASt3R bundle adjustment using Ceres Solver";
     m.def("run_bundle_adjustment", &run_bundle_adjustment,
           py::arg("cameras"),
           py::arg("points"),

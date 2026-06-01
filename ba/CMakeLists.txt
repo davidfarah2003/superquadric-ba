@@ -52,14 +52,20 @@ find_package(pybind11 REQUIRED)
 # `import ba` works after `pip install -e python/`
 set(BA_PYTHON_PKG "${CMAKE_SOURCE_DIR}/python/ba")
 
-# --- baseline BA ---
-pybind11_add_module(baseline_ba_core src/baseline_ba.cpp)
-target_link_libraries(baseline_ba_core PRIVATE Ceres::ceres)
-set_target_properties(baseline_ba_core PROPERTIES
+# --- MASt3R BA ---
+pybind11_add_module(mast3r_ba_core src/mast3r_ba.cpp)
+target_link_libraries(mast3r_ba_core PRIVATE Ceres::ceres)
+set_target_properties(mast3r_ba_core PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${BA_PYTHON_PKG}")
 
-# --- custom BA ---
-pybind11_add_module(custom_ba_core src/custom_ba.cpp)
-target_link_libraries(custom_ba_core PRIVATE Ceres::ceres)
-set_target_properties(custom_ba_core PROPERTIES
+# --- MASt3R + superquadric BA ---
+pybind11_add_module(mast3r_sq_ba_core src/mast3r_sq_ba.cpp)
+target_link_libraries(mast3r_sq_ba_core PRIVATE Ceres::ceres)
+set_target_properties(mast3r_sq_ba_core PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${BA_PYTHON_PKG}")
+
+# --- VGGT + superquadric BA ---
+pybind11_add_module(vggt_sq_ba_core src/vggt_sq_ba.cpp)
+target_link_libraries(vggt_sq_ba_core PRIVATE Ceres::ceres)
+set_target_properties(vggt_sq_ba_core PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${BA_PYTHON_PKG}")
