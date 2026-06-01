@@ -40,7 +40,6 @@ python3 benchmarking/sparse_view/benchmark.py \
     batch_size=1 \
     model=vggt \
     bundle_adjustment=superbundle \
-    +mast3r_max_frames=20 \
     hydra.run.dir=/work/courses/3dv/team39/logs/test_e2e_${SLURM_JOB_ID}_baseline
 echo
 
@@ -57,7 +56,6 @@ python3 benchmarking/sparse_view/benchmark.py \
     batch_size=1 \
     model=vggt \
     bundle_adjustment=superbundle_surface \
-    +mast3r_max_frames=20 \
     +surface_npz_path=/work/courses/3dv/team39/compose/data/output_npz/ase_scene_0.npz \
     +surface_lambda=50.0 \
     +surface_huber=0.0 \

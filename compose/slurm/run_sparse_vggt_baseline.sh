@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --account=3dv
-#SBATCH --job-name=ase-sparse-superbundle
+#SBATCH --job-name=ase-sparse-vggt
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --gpus=5060ti:1
 #SBATCH --mem=32G
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 
 export CUDA_HOME=/cluster/data/cuda/x86_64/13.0.2
 export PATH=$CUDA_HOME/bin:$PATH
@@ -17,7 +17,7 @@ export HYDRA_FULL_ERROR=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /work/courses/3dv/team39/map-anything
 
-echo "=== Running sparse-view benchmark: VGGT + MASt3R superbundle on ASE ==="
+echo "=== Sparse-view benchmark: VGGT baseline (no BA) ==="
 python3 benchmarking/sparse_view/benchmark.py \
     machine=student_cluster \
     dataset=benchmark_518_ase_wai \
@@ -25,8 +25,8 @@ python3 benchmarking/sparse_view/benchmark.py \
     dataset.num_views=10 \
     batch_size=1 \
     model=vggt \
-    bundle_adjustment=superbundle \
+    bundle_adjustment=none \
     sparse_covisibility_thres=0.6 \
-    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_superbundle_cov06'
+    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_vggt_cov06'
 
 echo "=== Benchmark complete ==="
