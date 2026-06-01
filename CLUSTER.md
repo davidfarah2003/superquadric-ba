@@ -189,6 +189,10 @@ python3 -m venv /work/courses/3dv/team39/envs/3dv
 source /work/courses/3dv/team39/envs/3dv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 pip install -e superdec/
+pip install -e map-anything/   # mapanything (editable)
+# map-anything pins uniception + a few extras; if it was installed with --no-deps,
+# add them explicitly so the benchmarks run:
+pip install uniception==0.1.7 natsort orjson pillow-heif python-box tensorboard
 ```
 
 ## GPU Hours Management

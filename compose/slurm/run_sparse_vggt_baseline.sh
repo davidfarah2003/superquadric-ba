@@ -9,7 +9,7 @@
 
 export CUDA_HOME=/cluster/data/cuda/x86_64/13.0.2
 export PATH=$CUDA_HOME/bin:$PATH
-source /home/lhecker/envs/3dv/bin/activate
+source /work/courses/3dv/team39/envs/3dv/bin/activate
 
 export HF_HOME=/work/courses/3dv/team39/checkpoints/hf_cache
 export HF_HUB_OFFLINE=1
