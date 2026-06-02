@@ -28,6 +28,7 @@ SURFACE_NPZ_DIR="${SURFACE_NPZ_DIR:-/work/courses/3dv/team39/compose/data/output
 LAMBDA_SURFACE="${LAMBDA_SURFACE:-50.0}"      # pixels-per-meter
 SURFACE_HUBER="${SURFACE_HUBER:-0.0}"          # disabled by default
 ASSOC_MAX_DIST="${ASSOC_MAX_DIST:-0.15}"       # 15 cm
+VIZ_SAVE_INDEX="${VIZ_SAVE_INDEX:-}"
 
 echo "=== Sparse-view benchmark: VGGT + MASt3R + SUPERDEC surface BA ==="
 echo "    lambda_surface=$LAMBDA_SURFACE  assoc_max_dist=$ASSOC_MAX_DIST  npz_dir=$SURFACE_NPZ_DIR"
@@ -45,6 +46,7 @@ python3 benchmarking/sparse_view/benchmark.py \
     +surface_lambda="$LAMBDA_SURFACE" \
     +surface_huber="$SURFACE_HUBER" \
     +surface_assoc_max_distance="$ASSOC_MAX_DIST" \
-    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_surface_cov06'
+    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_surface_cov06' \
+    ${VIZ_SAVE_INDEX:+viz_save_index=$VIZ_SAVE_INDEX}
 
 echo "=== Benchmark complete ==="

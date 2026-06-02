@@ -17,6 +17,8 @@ export HYDRA_FULL_ERROR=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /work/courses/3dv/team39/map-anything
 
+VIZ_SAVE_INDEX="${VIZ_SAVE_INDEX:-}"
+
 echo "=== Running sparse-view benchmark: VGGT + MASt3R BA (no superquadrics) on ASE ==="
 python3 benchmarking/sparse_view/benchmark.py \
     machine=student_cluster \
@@ -27,6 +29,7 @@ python3 benchmarking/sparse_view/benchmark.py \
     model=vggt \
     bundle_adjustment=mast3r \
     sparse_covisibility_thres=0.6 \
-    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_mast3r_cov06'
+    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_mast3r_cov06' \
+    ${VIZ_SAVE_INDEX:+viz_save_index=$VIZ_SAVE_INDEX}
 
 echo "=== Benchmark complete ==="

@@ -208,7 +208,10 @@ py::tuple run_bundle_adjustment(
         py::object sq_params    = py::none(),
         py::object point_to_sq  = py::none(),
         double lambda_surface   = 0.0,
-        double surface_huber    = 0.0)
+        double surface_huber    = 0.0,
+        int    max_num_iterations = 200,
+        int    num_threads        = 4,
+        double function_tolerance = 1e-6)
 {
     auto cam_buf  = cameras.request();
     auto pt_buf   = points.request();
@@ -350,8 +353,9 @@ py::tuple run_bundle_adjustment(
         delete ordering;
     }
     options.minimizer_progress_to_stdout = verbose;
-    options.num_threads                  = 4;
-    options.max_num_iterations           = 200;
+    options.num_threads                  = num_threads;
+    options.max_num_iterations           = max_num_iterations;
+    options.function_tolerance           = function_tolerance;
 
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
@@ -385,6 +389,9 @@ PYBIND11_MODULE(mast3r_sq_ba_core, m) {
           py::arg("point_to_sq")      = py::none(),
           py::arg("lambda_surface")   = 0.0,
           py::arg("surface_huber")    = 0.0,
+          py::arg("max_num_iterations") = 200,
+          py::arg("num_threads")        = 4,
+          py::arg("function_tolerance") = 1e-6,
           R"doc(
 Run sparse bundle adjustment in place.
 

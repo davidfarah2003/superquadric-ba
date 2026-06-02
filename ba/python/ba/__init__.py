@@ -22,6 +22,7 @@ Entry point:
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from pathlib import Path
 
@@ -67,12 +68,19 @@ def run_bundle_adjustment_mast3r_sq(cameras, points, observations,
                                     sq_params=None,
                                     point_to_sq=None,
                                     lambda_surface=0.0,
-                                    surface_huber=0.0):
+                                    surface_huber=0.0,
+                                    max_num_iterations=200,
+                                    num_threads=4,
+                                    function_tolerance=1e-6):
     """Run MASt3R + superquadric Ceres BA. All arrays are modified **in place**.
 
     Surface-residual mode is engaged when ``lambda_surface > 0`` and both
     ``sq_params`` (K, 11) and ``point_to_sq`` (num_points,) are supplied.
     See ``ba.superdec.pack_for_ceres`` for the expected sq_params layout.
+
+    ``max_num_iterations`` / ``num_threads`` / ``function_tolerance`` expose the
+    Ceres solver budget (defaults match the live benchmark; lower iterations or
+    a looser tolerance trade a little accuracy for large speed-ups in sweeps).
     """
     core = _load_core("mast3r_sq_ba_core")
     return core.run_bundle_adjustment(cameras, points, observations,
@@ -80,7 +88,9 @@ def run_bundle_adjustment_mast3r_sq(cameras, points, observations,
                                       fix_first_camera, huber_threshold,
                                       verbose, fix_points,
                                       sq_params, point_to_sq,
-                                      lambda_surface, surface_huber)
+                                      lambda_surface, surface_huber,
+                                      max_num_iterations, num_threads,
+                                      function_tolerance)
 
 
 def run_bundle_adjustment_vggt_sq(cameras, points, observations,
@@ -252,7 +262,11 @@ def mast3r_bundle_adjust(
         superdec_npz_path: str | None = None,
         lambda_surface: float = 0.0,
         surface_huber: float = 0.0,
-        assoc_max_distance: float = 0.15):
+        assoc_max_distance: float = 0.15,
+        em_outer: int = 1,
+        em_inner_iters: int = 200,
+        em_warmup: bool = False,
+        num_threads: int = 4):
     """
     Refine VGGT-predicted poses with Ceres BA, using MASt3R as feature matcher.
 
@@ -292,6 +306,18 @@ def mast3r_bundle_adjust(
     surface_huber      : Huber delta in pixel-equivalent units (<=0 disables).
     assoc_max_distance : drop points whose nearest-SQ radial distance exceeds
                          this threshold (meters). Default 0.15 m.
+
+    EM-style iterated re-association (surface BA only):
+    em_outer           : number of outer EM iterations. <=1 keeps the original
+                         one-shot behaviour (associate once, solve once). >1
+                         alternates E-step (re-assign the CURRENT moving points
+                         to their nearest SQ) and M-step (a short surface solve),
+                         so points that drift toward the wrong SQ get re-pointed
+                         before they accumulate a wrong pull. Tuned best: 2.
+    em_inner_iters     : Ceres max iterations per inner (M-step) solve. Tuned: 41.
+    em_warmup          : if True, run one reprojection-only solve (lambda=0)
+                         before the first association, so the surface term sees
+                         cleaner structure. Tuned best: True.
 
     Returns
     -------
@@ -578,6 +604,7 @@ def mast3r_bundle_adjust(
         # then build (point -> SQ) associations on the BA point cloud. ---
         sq_params_arg = None
         point_to_sq_arg = None
+        sq_pred_arg = None       # SQs in predicted frame, kept for EM re-assoc
         if use_surface:
             gt_centres = np.stack([batch[v]["camera_pose"][b].cpu().numpy()[:3, 3]
                                    for v in range(n_views)], axis=0)
@@ -589,6 +616,7 @@ def mast3r_bundle_adjust(
             else:
                 sim3_g2p = invert_sim3(sim3_p2g)
                 sq_pred = transform_sqs(sq_world, sim3_g2p)
+                sq_pred_arg = sq_pred
                 point_to_sq_arg, dists = assign_points_to_sqs(
                     points, sq_pred, max_distance=assoc_max_distance)
                 sq_params_arg, _ = pack_for_ceres(sq_pred)
@@ -599,11 +627,53 @@ def mast3r_bundle_adjust(
                           f"(median dist {np.median(dists)*1000:.1f} mm, "
                           f"threshold {assoc_max_distance*1000:.0f} mm)")
 
+        # --- Optional: dump parameter-independent BA inputs for offline eval ---
+        # Guarded by BA_DUMP_DIR. Captures the PRE-BA state (cameras via .copy()
+        # before Ceres mutates them in place). Surface association (point_to_sq /
+        # sq_params) is deliberately NOT dumped: it depends on assoc_max_distance
+        # and is recomputed offline. Behavior is unchanged when BA_DUMP_DIR unset.
+        _ba_dump_dir = os.environ.get("BA_DUMP_DIR")
+        if _ba_dump_dir:
+            scene_label = str(batch[0]["label"][0])
+            gt_poses = np.stack(
+                [batch[v]["camera_pose"][b].cpu().numpy() for v in range(n_views)],
+                axis=0).astype(np.float64)                      # (V, 4, 4) C2W
+            gt_centres_dump = gt_poses[:, :3, 3].astype(np.float64)  # (V, 3)
+            dump_kw = dict(
+                cameras=cameras.copy(),                         # pre-BA (V, 10)
+                points=points,                                  # (M, 3)
+                observations=observations,                      # (K, 2)
+                cam_indices=cam_indices,                        # (K,) int32
+                pt_indices=pt_indices,                          # (K,) int32
+                cam_centres=cam_centres,                        # (V, 3) predicted
+                gt_centres=gt_centres_dump,                     # (V, 3) GT
+                gt_poses=gt_poses,                              # (V, 4, 4)
+                scene_label=scene_label,
+                superdec_npz_path=str(superdec_npz_path),
+            )
+            try:
+                dump_kw["gt_quats"] = np.stack(
+                    [batch[v]["camera_pose_quats"][b].cpu().numpy()
+                     for v in range(n_views)], axis=0).astype(np.float64)  # (V,4) xyzw
+                dump_kw["gt_trans"] = np.stack(
+                    [batch[v]["camera_pose_trans"][b].cpu().numpy()
+                     for v in range(n_views)], axis=0).astype(np.float64)  # (V,3)
+            except (KeyError, TypeError):
+                pass
+            os.makedirs(_ba_dump_dir, exist_ok=True)
+            np.savez_compressed(
+                os.path.join(_ba_dump_dir, f"{scene_label}.npz"), **dump_kw)
+            if verbose:
+                print(f"[mast3r_BA/dump] b={b}: wrote "
+                      f"{os.path.join(_ba_dump_dir, scene_label + '.npz')}")
+
         # --- Solve BA ---
+        em_on = (backend == "mast3r_sq" and use_surface
+                 and sq_pred_arg is not None and int(em_outer) > 1)
         if backend == "mast3r":
             final_cost, iters = run_bundle_adjustment_mast3r(
                 cameras, points, observations, cam_indices, pt_indices, verbose)
-        elif backend == "mast3r_sq":
+        elif backend == "mast3r_sq" and not em_on:
             final_cost, iters = run_bundle_adjustment_mast3r_sq(
                 cameras, points, observations, cam_indices, pt_indices,
                 fix_first_camera=fix_first_camera,
@@ -613,7 +683,42 @@ def mast3r_bundle_adjust(
                 sq_params=sq_params_arg,
                 point_to_sq=point_to_sq_arg,
                 lambda_surface=lambda_surface if use_surface else 0.0,
-                surface_huber=surface_huber)
+                surface_huber=surface_huber,
+                num_threads=num_threads)
+        elif backend == "mast3r_sq" and em_on:
+            # EM-style iterated re-association: alternate E-step (re-assign the
+            # CURRENT moving points to their nearest SQ) with M-step (a short
+            # surface solve that moves cameras+points in place). Optionally warm
+            # up with a reprojection-only solve so the first association sees
+            # cleaner structure. Ceres mutates `cameras`/`points` in place, so
+            # each E-step re-associates against the updated geometry.
+            if em_warmup:
+                final_cost, iters = run_bundle_adjustment_mast3r_sq(
+                    cameras, points, observations, cam_indices, pt_indices,
+                    fix_first_camera=fix_first_camera,
+                    huber_threshold=huber_threshold, verbose=verbose,
+                    fix_points=False, sq_params=None, point_to_sq=None,
+                    lambda_surface=0.0, surface_huber=surface_huber,
+                    max_num_iterations=int(em_inner_iters),
+                    num_threads=num_threads)
+            for _it in range(int(em_outer)):
+                point_to_sq_arg, _d = assign_points_to_sqs(
+                    points, sq_pred_arg, max_distance=assoc_max_distance)
+                point_to_sq_arg = np.ascontiguousarray(point_to_sq_arg, np.int32)
+                final_cost, iters = run_bundle_adjustment_mast3r_sq(
+                    cameras, points, observations, cam_indices, pt_indices,
+                    fix_first_camera=fix_first_camera,
+                    huber_threshold=huber_threshold, verbose=verbose,
+                    fix_points=False, sq_params=sq_params_arg,
+                    point_to_sq=point_to_sq_arg,
+                    lambda_surface=lambda_surface, surface_huber=surface_huber,
+                    max_num_iterations=int(em_inner_iters),
+                    num_threads=num_threads)
+                if verbose:
+                    n_assigned = int((point_to_sq_arg >= 0).sum())
+                    print(f"[mast3r_BA/surface] b={b} EM iter {_it+1}/{em_outer}: "
+                          f"{n_assigned}/{len(points)} assigned  "
+                          f"final_cost={final_cost:.4f}")
         else:
             raise ValueError(f"Unknown backend '{backend}'. Use 'mast3r' or 'mast3r_sq'.")
 
