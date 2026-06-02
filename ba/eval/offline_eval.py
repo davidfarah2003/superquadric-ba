@@ -186,6 +186,7 @@ def run_ba(cache: dict, params: dict):
     assoc_max_distance = float(p["assoc_max_distance"])
     huber_threshold = float(p["huber_threshold"])
     fix_first_camera = bool(p["fix_first_camera"])
+    residual_mode = int(p.get("residual_mode") or 0)
     max_num_iterations = int(p.get("max_iterations") or 200)
     num_threads = int(p.get("num_threads") or 4)
     function_tolerance = float(p.get("function_tolerance") or 1e-6)
@@ -239,6 +240,7 @@ def run_ba(cache: dict, params: dict):
         point_to_sq=point_to_sq,
         lambda_surface=lambda_surface,
         surface_huber=surface_huber,
+        residual_mode=residual_mode,
         max_num_iterations=max_num_iterations,
         num_threads=num_threads,
         function_tolerance=function_tolerance,

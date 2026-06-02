@@ -38,6 +38,9 @@ def refine(cache, params):
     n_outer = int(p.get("n_outer", 3))
     inner_iters = int(p.get("inner_iters", 30))
     warmup = bool(p.get("warmup", True))
+    residual_mode = int(p.get("residual_mode", 0))
+    refine_sq = bool(p.get("refine_sq", False))
+    sq_anchor_weight = float(p.get("sq_anchor_weight", 10.0))
     fix_first_camera = bool(p.get("fix_first_camera", True))
     function_tolerance = float(p.get("function_tolerance", 1e-3))
     num_threads = int(p.get("num_threads", 4))
@@ -81,6 +84,8 @@ def refine(cache, params):
                  huber_threshold=huber_threshold,
                  fix_first_camera=fix_first_camera,
                  sq_params=sq_params, point_to_sq=point_to_sq,
+                 residual_mode=residual_mode,
+                 refine_sq=refine_sq, sq_anchor_weight=sq_anchor_weight,
                  max_iterations=inner_iters,
                  function_tolerance=function_tolerance, num_threads=num_threads)
 

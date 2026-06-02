@@ -39,13 +39,16 @@ def main(argv=None):
     ap.add_argument("--lambda_surface", type=float, default=50.0)
     ap.add_argument("--assoc", type=float, default=0.15)
     ap.add_argument("--num_threads", type=int, default=1)
+    ap.add_argument("--function_tolerance", type=float, default=1e-3,
+                    help="1e-3 = fast proxy; use 1e-6 to match the live solve")
     args = ap.parse_args(argv)
 
     # common params superset; each strategy/refine reads the keys it needs
     P = dict(lambda_surface=args.lambda_surface, lambda_max=args.lambda_surface,
              assoc_max_distance=args.assoc, surface_huber=0.0, huber_threshold=2.0,
              max_points=args.max_points, max_iterations=args.max_iterations,
-             inner_iters=args.max_iterations, function_tolerance=1e-3,
+             inner_iters=args.max_iterations,
+             function_tolerance=args.function_tolerance,
              num_threads=args.num_threads)
 
     rows = []
@@ -57,7 +60,7 @@ def main(argv=None):
                           "assoc_max_distance": args.assoc,
                           "max_points": args.max_points,
                           "max_iterations": args.max_iterations,
-                          "function_tolerance": 1e-3,
+                          "function_tolerance": args.function_tolerance,
                           "num_threads": args.num_threads}, args.cache_dir, jobs=args.jobs)
             rows.append((name, r["pose_auc_5"], r.get("n_scenes")))
             print(f"[ref ] {name:16s} pose_auc_5={r['pose_auc_5']:.3f}", flush=True)

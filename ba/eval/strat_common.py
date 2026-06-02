@@ -88,16 +88,23 @@ def associate(points, sq_pred, assoc_max_distance):
 def solve(cameras, points, observations, cam_indices, pt_indices, *,
           lambda_surface=0.0, surface_huber=0.0, huber_threshold=2.0,
           fix_first_camera=True, sq_params=None, point_to_sq=None,
+          residual_mode=0, point_weights=None,
+          refine_sq=False, sq_anchor_weight=10.0,
           max_iterations=50, function_tolerance=1e-3, num_threads=4):
     """Run one Ceres mast3r_sq solve IN PLACE on cameras/points.
 
     Returns (final_cost, num_successful_steps). Pass sq_params/point_to_sq with
     lambda_surface>0 to enable the surface term; omit them for plain reprojection.
+    ``residual_mode`` selects the surface-residual form (0=RADIAL default,
+    1=HINGE_OUTSIDE, 2=HINGE_INSIDE, 3=RADIAL_NORMALIZED, 4=HINGE_OUTSIDE_NORMALIZED);
+    ``point_weights`` (M,) optionally soft-weights each point's surface term.
     """
     return ba.run_bundle_adjustment_mast3r_sq(
         cameras, points, observations, cam_indices, pt_indices,
         fix_first_camera=fix_first_camera, huber_threshold=huber_threshold,
         verbose=False, fix_points=False, sq_params=sq_params,
         point_to_sq=point_to_sq, lambda_surface=lambda_surface,
-        surface_huber=surface_huber, max_num_iterations=max_iterations,
+        surface_huber=surface_huber, residual_mode=residual_mode,
+        point_weights=point_weights, refine_sq=refine_sq,
+        sq_anchor_weight=sq_anchor_weight, max_num_iterations=max_iterations,
         function_tolerance=function_tolerance, num_threads=num_threads)

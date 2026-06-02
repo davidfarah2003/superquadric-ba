@@ -4,6 +4,8 @@
 #include <ceres/rotation.h>
 #include <cmath>
 #include <iostream>
+#include <vector>
+#include <array>
 
 namespace py = pybind11;
 
@@ -77,24 +79,42 @@ struct ReprojectionError {
 //
 // Numerical safeguards mirror superdec.utils.safe_operations.safe_pow:
 // abs() inputs to pow are clamped to [1e-3, 5e2] before and after.
+// Residual modes for the superquadric surface term.
+//   0 RADIAL                    r = ||q|| * |io|          (current; default)
+//   1 HINGE_OUTSIDE             r = ||q|| * max(0, -io)   (penalize outside only)
+//   2 HINGE_INSIDE              r = ||q|| * max(0,  io)   (penalize inside only)
+//   3 RADIAL_NORMALIZED         r =        |io|           (drop ||q|| prefactor)
+//   4 HINGE_OUTSIDE_NORMALIZED  r =        max(0, -io)
+//   5 NORMAL_OUTSIDE            r = max(0, d_n)  one-sided point-to-plane distance
+//   6 NORMAL_DISTANCE           r =        |d_n|  two-sided point-to-plane distance
+// io = F^{-e1/2} - 1 :  io > 0 inside, io < 0 outside, 0 on surface (verified).
+// d_n = (F - 1)/||grad_q F|| : tangent-plane (point-to-plane) signed distance to
+//   the level set F=1 (d_n > 0 outside, < 0 inside). grad_q F is the analytic SQ
+//   surface normal; only ||grad F|| is used, so per-axis sign(q_i) factors square
+//   away. Gives the surface term a local-orientation signal (rotation lever).
+// All are then multiplied by lambda_surface and sqrt(weight).
+enum SurfaceResidualMode {
+    SR_RADIAL                   = 0,
+    SR_HINGE_OUTSIDE            = 1,
+    SR_HINGE_INSIDE             = 2,
+    SR_RADIAL_NORMALIZED        = 3,
+    SR_HINGE_OUTSIDE_NORMALIZED = 4,
+    SR_NORMAL_OUTSIDE           = 5,
+    SR_NORMAL_DISTANCE          = 6,
+};
+
 struct SurfaceResidual {
     SurfaceResidual(double a1, double a2, double a3,
                     double e1, double e2,
-                    const double* rotation_aa,
-                    const double* translation,
-                    double lambda_surface)
+                    double lambda_surface,
+                    int    mode,
+                    double weight)
         : a1_(a1), a2_(a2), a3_(a3),
           e1_(e1), e2_(e2),
-          lambda_(lambda_surface)
-    {
-        // Negate angle-axis: R(-aa) is the inverse of R(aa).
-        neg_aa_[0] = -rotation_aa[0];
-        neg_aa_[1] = -rotation_aa[1];
-        neg_aa_[2] = -rotation_aa[2];
-        t_[0] = translation[0];
-        t_[1] = translation[1];
-        t_[2] = translation[2];
-    }
+          lambda_(lambda_surface),
+          mode_(mode),
+          sqrt_w_(weight > 0.0 ? std::sqrt(weight) : 0.0)
+    {}
 
     template <typename T>
     static T safe_clamp(T x, double lo, double hi) {
@@ -112,17 +132,25 @@ struct SurfaceResidual {
         return safe_clamp(r, 1e-3, 5e2);
     }
 
+    // Core surface magnitude given the SQ pose (aa, t) as templated params.
+    //   q = R(aa)^T (point - t) = AngleAxisRotatePoint(-aa, point - t)
+    // aa is angle-axis for R: canonical -> world; t is the SQ centre (world).
     template <typename T>
-    bool operator()(const T* const point, T* residual) const {
+    bool operator()(const T* const point,
+                    const T* const sq_pose,   // [aa(3), t(3)]
+                    T* residual) const {
+        const T* aa = sq_pose;          // canonical -> world rotation
+        const T* t  = sq_pose + 3;      // SQ centre in world coords
+
         // diff = point - t
         T diff[3] = {
-            point[0] - T(t_[0]),
-            point[1] - T(t_[1]),
-            point[2] - T(t_[2]),
+            point[0] - t[0],
+            point[1] - t[1],
+            point[2] - t[2],
         };
 
         // q = R^T diff = AngleAxisRotate(-aa, diff)
-        const T neg_aa[3] = {T(neg_aa_[0]), T(neg_aa_[1]), T(neg_aa_[2])};
+        const T neg_aa[3] = {-aa[0], -aa[1], -aa[2]};
         T q[3];
         ceres::AngleAxisRotatePoint(neg_aa, diff, q);
 
@@ -145,27 +173,100 @@ struct SurfaceResidual {
         T Fz  = safe_pow_pos(qa2, two_over_e1);
         T F   = safe_clamp(Fxy + Fz, 1e-3, 5e2);
 
-        T inside_outside = safe_pow_pos(F, T(-e1_ / 2.0)) - T(1.0);
+        // io > 0 inside, io < 0 outside, 0 on the surface.
+        T io = safe_pow_pos(F, T(-e1_ / 2.0)) - T(1.0);
 
-        residual[0] = T(lambda_) * q_norm * ceres::abs(inside_outside);
+        // Per-mode magnitude (>= 0). Hinges keep only one side via max(0, .).
+        T mag;
+        switch (mode_) {
+            case SR_HINGE_OUTSIDE:            // outside -> -io > 0
+                mag = q_norm * ceres::fmax(T(0.0), -io);
+                break;
+            case SR_HINGE_INSIDE:             // inside  ->  io > 0
+                mag = q_norm * ceres::fmax(T(0.0),  io);
+                break;
+            case SR_RADIAL_NORMALIZED:        // drop ||q|| prefactor
+                mag = ceres::abs(io);
+                break;
+            case SR_HINGE_OUTSIDE_NORMALIZED: // drop ||q|| + outside only
+                mag = ceres::fmax(T(0.0), -io);
+                break;
+            case SR_NORMAL_OUTSIDE:           // one-sided point-to-plane (outside)
+            case SR_NORMAL_DISTANCE: {        // two-sided point-to-plane distance
+                // grad_q F : analytic SQ normal. Only its norm is used, so the
+                // sign(q_i)/a_i factors square to 1/a_i^2 and drop their sign.
+                // P = s0^{2/e2} + s1^{2/e2}  (inner sum; Fxy = P^ratio).
+                T P = safe_pow_pos(qa0, two_over_e2) + safe_pow_pos(qa1, two_over_e2);
+                P   = safe_clamp(P, 1e-3, 5e2);
+                T c  = ratio * safe_pow_pos(P, ratio - T(1.0)) * two_over_e2;
+                T G0 = c * safe_pow_pos(qa0, two_over_e2 - T(1.0)) / T(a1_);
+                T G1 = c * safe_pow_pos(qa1, two_over_e2 - T(1.0)) / T(a2_);
+                T G2 = two_over_e1 * safe_pow_pos(qa2, two_over_e1 - T(1.0)) / T(a3_);
+                T grad_norm = ceres::sqrt(G0*G0 + G1*G1 + G2*G2 + T(1e-12));
+                grad_norm = safe_clamp(grad_norm, 1e-4, 1e6);
+                T d_n = (F - T(1.0)) / grad_norm;   // >0 outside, <0 inside
+                if (mode_ == SR_NORMAL_OUTSIDE)
+                    mag = ceres::fmax(T(0.0), d_n); // penalize only outside
+                else
+                    mag = ceres::abs(d_n);          // two-sided
+                break;
+            }
+            case SR_RADIAL:                   // current (default)
+            default:
+                mag = q_norm * ceres::abs(io);
+                break;
+        }
+
+        residual[0] = T(sqrt_w_) * T(lambda_) * mag;
         return true;
     }
 
-    static ceres::CostFunction* Create(double a1, double a2, double a3,
-                                        double e1, double e2,
-                                        const double* rotation_aa,
-                                        const double* translation,
-                                        double lambda_surface) {
-        return new ceres::AutoDiffCostFunction<SurfaceResidual, 1, 3>(
+    // Frozen-pose path (refine_sq=false): wrap the SQ pose as a CONSTANT
+    // parameter block so the SAME functor serves both paths. Byte-identical
+    // residual values to the old 1-block functor (pose just isn't optimised).
+    static ceres::CostFunction* CreateRefine(double a1, double a2, double a3,
+                                             double e1, double e2,
+                                             double lambda_surface,
+                                             int    mode,
+                                             double weight) {
+        return new ceres::AutoDiffCostFunction<SurfaceResidual, 1, 3, 6>(
             new SurfaceResidual(a1, a2, a3, e1, e2,
-                                rotation_aa, translation, lambda_surface));
+                                lambda_surface, mode, weight));
     }
 
     double a1_, a2_, a3_;
     double e1_, e2_;
-    double neg_aa_[3];
-    double t_[3];
     double lambda_;
+    int    mode_;
+    double sqrt_w_;
+};
+
+
+// -------------------------------------------------------------------------
+// Soft anchor keeping each refined SQ pose near its SUPERDEC init.
+// residual = sqrt(anchor_weight) * (pose - pose0)   (6-vector: [aa(3), t(3)]).
+// Fixes the gauge for SQs with few/no surface points and prevents drift.
+struct SQPoseAnchor {
+    SQPoseAnchor(const double* pose0, double anchor_weight)
+        : sw_(anchor_weight > 0.0 ? std::sqrt(anchor_weight) : 0.0) {
+        for (int i = 0; i < 6; ++i) pose0_[i] = pose0[i];
+    }
+
+    template <typename T>
+    bool operator()(const T* const pose, T* residual) const {
+        for (int i = 0; i < 6; ++i)
+            residual[i] = T(sw_) * (pose[i] - T(pose0_[i]));
+        return true;
+    }
+
+    static ceres::CostFunction* Create(const double* pose0,
+                                       double anchor_weight) {
+        return new ceres::AutoDiffCostFunction<SQPoseAnchor, 6, 6>(
+            new SQPoseAnchor(pose0, anchor_weight));
+    }
+
+    double pose0_[6];
+    double sw_;
 };
 
 
@@ -209,9 +310,13 @@ py::tuple run_bundle_adjustment(
         py::object point_to_sq  = py::none(),
         double lambda_surface   = 0.0,
         double surface_huber    = 0.0,
+        int    residual_mode    = 0,           // 0=RADIAL (default/current)
+        py::object point_weights = py::none(), // (num_points,) float64 or None
         int    max_num_iterations = 200,
         int    num_threads        = 4,
-        double function_tolerance = 1e-6)
+        double function_tolerance = 1e-6,
+        bool   refine_sq          = false,   // optimise each SQ rigid pose
+        double sq_anchor_weight   = 10.0)    // soft prior keeping pose near init
 {
     auto cam_buf  = cameras.request();
     auto pt_buf   = points.request();
@@ -249,8 +354,16 @@ py::tuple run_bundle_adjustment(
             pt_data  + 3 * pi_data[i]);
     }
 
-    // Optional surface residual against frozen SUPERDEC primitives.
+    // Optional surface residual against SUPERDEC primitives.
+    // The SQ pose ([aa(3), t(3)]) is a 6-D parameter block per SQ. With
+    // refine_sq=false it is held CONSTANT (byte-identical to the frozen-pose
+    // path); with refine_sq=true it is optimised jointly with cameras+points,
+    // softly anchored to its SUPERDEC init via SQPoseAnchor.
     int num_surface_blocks = 0;
+    int num_anchor_blocks  = 0;
+    std::vector<std::array<double, 6>> sq_pose;   // per-SQ [aa, t], persistent
+    std::vector<char> sq_pose_used;               // 1 if SQ s has >=1 point
+    int num_sqs_decl = 0;
     if (lambda_surface > 0.0
         && !sq_params.is_none()
         && !point_to_sq.is_none())
@@ -267,8 +380,32 @@ py::tuple run_bundle_adjustment(
                 "point_to_sq must have shape (num_points,) matching points");
 
         const int num_sqs = static_cast<int>(sq_buf.shape[0]);
+        num_sqs_decl = num_sqs;
         const double* sq_data  = static_cast<double*>(sq_buf.ptr);
         const int*    p2s_data = static_cast<int*>(p2s_buf.ptr);
+
+        // Persistent per-SQ pose blocks, initialised from sq_params rows.
+        // aa = row[5..7], t = row[8..10]. These doubles are mutated in place
+        // by Ceres when refine_sq is true; read back by the wrapper if needed.
+        sq_pose.resize(num_sqs);
+        sq_pose_used.assign(num_sqs, 0);
+        for (int s = 0; s < num_sqs; ++s) {
+            const double* row = sq_data + 11 * s;
+            for (int k = 0; k < 3; ++k) sq_pose[s][k]     = row[5 + k]; // aa
+            for (int k = 0; k < 3; ++k) sq_pose[s][3 + k] = row[8 + k]; // t
+        }
+
+        // Optional per-point surface weight (soft gating). None -> all 1.0.
+        py::array_t<double, py::array::c_style> w_arr;
+        const double* w_data = nullptr;
+        if (!point_weights.is_none()) {
+            w_arr = py::cast<py::array_t<double, py::array::c_style>>(point_weights);
+            auto w_buf = w_arr.request();
+            if (w_buf.ndim != 1 || w_buf.shape[0] != num_pts)
+                throw std::runtime_error(
+                    "point_weights must have shape (num_points,) matching points");
+            w_data = static_cast<double*>(w_buf.ptr);
+        }
 
         for (int i = 0; i < num_pts; ++i) {
             const int s = p2s_data[i];
@@ -277,22 +414,49 @@ py::tuple run_bundle_adjustment(
                 throw std::runtime_error(
                     "point_to_sq value out of range for sq_params");
 
+            const double w = (w_data ? w_data[i] : 1.0);
+            if (w <= 0.0) continue;   // zero weight -> skip block entirely
+
             const double* row = sq_data + 11 * s;
             const double a1 = row[0], a2 = row[1], a3 = row[2];
             const double e1 = row[3], e2 = row[4];
-            const double* rot_aa = row + 5;     // (3,)
-            const double* trans  = row + 8;     // (3,)
 
             ceres::LossFunction* loss = nullptr;
             if (surface_huber > 0.0)
                 loss = new ceres::HuberLoss(surface_huber);
 
             problem.AddResidualBlock(
-                SurfaceResidual::Create(a1, a2, a3, e1, e2,
-                                        rot_aa, trans, lambda_surface),
+                SurfaceResidual::CreateRefine(a1, a2, a3, e1, e2,
+                                              lambda_surface,
+                                              residual_mode, w),
                 loss,
-                pt_data + 3 * i);
+                pt_data + 3 * i,
+                sq_pose[s].data());        // shared per-SQ pose block
+            sq_pose_used[s] = 1;
             ++num_surface_blocks;
+        }
+
+        // Configure the SQ pose blocks now that they are in the problem.
+        for (int s = 0; s < num_sqs; ++s) {
+            if (!sq_pose_used[s]) continue;
+            double* pose = sq_pose[s].data();
+            if (!problem.HasParameterBlock(pose)) continue;
+            if (!refine_sq) {
+                // Frozen: constant pose -> zero Jacobian -> identical residuals
+                // and identical solution to the old single-block path.
+                problem.SetParameterBlockConstant(pose);
+            } else {
+                // Refine: keep free + add a soft anchor to its init pose.
+                if (sq_anchor_weight > 0.0) {
+                    double pose0[6];
+                    for (int k = 0; k < 6; ++k) pose0[k] = pose[k];
+                    problem.AddResidualBlock(
+                        SQPoseAnchor::Create(pose0, sq_anchor_weight),
+                        nullptr,
+                        pose);
+                    ++num_anchor_blocks;
+                }
+            }
         }
     }
 
@@ -343,6 +507,18 @@ py::tuple run_bundle_adjustment(
             ++cams_in_problem;
         }
     }
+    // Free SQ pose blocks (refine_sq) join group 1: non-point unknowns
+    // eliminated after the structure block in the Schur complement.
+    if (refine_sq) {
+        for (int s = 0; s < num_sqs_decl; ++s) {
+            if (s >= static_cast<int>(sq_pose.size()) || !sq_pose_used[s])
+                continue;
+            double* pose = sq_pose[s].data();
+            if (problem.HasParameterBlock(pose) &&
+                !problem.IsParameterBlockConstant(pose))
+                ordering->AddElementToGroup(pose, 1);
+        }
+    }
 
     ceres::Solver::Options options;
     if (cams_in_problem > 0 && num_obs > 0) {
@@ -366,7 +542,10 @@ py::tuple run_bundle_adjustment(
             std::cout << "[surface] " << num_surface_blocks
                       << " surface residual blocks active "
                       << "(lambda=" << lambda_surface
-                      << ", huber=" << surface_huber << ")\n";
+                      << ", huber=" << surface_huber
+                      << ", refine_sq=" << (refine_sq ? 1 : 0)
+                      << ", anchors=" << num_anchor_blocks
+                      << ", anchor_w=" << sq_anchor_weight << ")\n";
     }
 
     return py::make_tuple(summary.final_cost,
@@ -389,9 +568,13 @@ PYBIND11_MODULE(mast3r_sq_ba_core, m) {
           py::arg("point_to_sq")      = py::none(),
           py::arg("lambda_surface")   = 0.0,
           py::arg("surface_huber")    = 0.0,
+          py::arg("residual_mode")    = 0,
+          py::arg("point_weights")    = py::none(),
           py::arg("max_num_iterations") = 200,
           py::arg("num_threads")        = 4,
           py::arg("function_tolerance") = 1e-6,
+          py::arg("refine_sq")          = false,
+          py::arg("sq_anchor_weight")   = 10.0,
           R"doc(
 Run sparse bundle adjustment in place.
 

@@ -4,7 +4,6 @@
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --gpus=5060ti:1
-#SBATCH --cpus-per-gpu=28
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
 #SBATCH --exclude=studgpu-node09
@@ -43,15 +42,20 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /work/courses/3dv/team39/map-anything
 
 SURFACE_NPZ_DIR="${SURFACE_NPZ_DIR:-/work/courses/3dv/team39/compose/data/output_npz}"
-# --- tuned em_reassoc config (BO best) ---
-LAMBDA_SURFACE="${LAMBDA_SURFACE:-3.347}"        # pixels-per-meter (low!)
+# --- WINNING config: one-sided HINGE surface residual + EM re-association.
+#     pose_auc_5 = 29.6 LIVE (verified, reproduced) vs regular BA 29.42. ---
+LAMBDA_SURFACE="${LAMBDA_SURFACE:-15.0}"         # surface weight (sweet spot; higher hurts)
 ASSOC_MAX_DIST="${ASSOC_MAX_DIST:-0.0372}"       # 3.7 cm (tight)
 SURFACE_HUBER="${SURFACE_HUBER:-2.749}"          # surface Huber delta
-HUBER_THRESHOLD="${HUBER_THRESHOLD:-0.738}"      # reprojection Huber delta (px)
+HUBER_THRESHOLD="${HUBER_THRESHOLD:-1.0}"        # reprojection Huber delta (px); matches mast3r backend
 EM_OUTER="${EM_OUTER:-2}"                         # EM outer iterations
 EM_INNER_ITERS="${EM_INNER_ITERS:-41}"           # Ceres iters per inner solve
 EM_WARMUP="${EM_WARMUP:-true}"                    # reproj-only warmup first
-NUM_THREADS="${NUM_THREADS:-28}"                  # Ceres BA threads (== --cpus-per-gpu)
+RESIDUAL_MODE="${RESIDUAL_MODE:-1}"               # 1=HINGE_OUTSIDE (the win); 0=radial(old) 5=normal
+FILTER_MAX_ASPECT="${FILTER_MAX_ASPECT:-0}"       # >0 drops degenerate SQs (e.g. 20)
+REFINE_SQ="${REFINE_SQ:-false}"                   # true = co-refine SQ pose in BA
+SQ_ANCHOR_WEIGHT="${SQ_ANCHOR_WEIGHT:-10.0}"      # stiffness of SQ-pose anchor prior
+NUM_THREADS="${NUM_THREADS:-4}"                   # Ceres BA threads (4-CPU cap now)
 VIZ_SAVE_INDEX="${VIZ_SAVE_INDEX:-}"
 
 echo "=== Sparse-view benchmark: VGGT + MASt3R + SUPERDEC surface BA (EM) ==="
@@ -76,6 +80,10 @@ python3 benchmarking/sparse_view/benchmark.py \
     +surface_em_outer="$EM_OUTER" \
     +surface_em_inner_iters="$EM_INNER_ITERS" \
     +surface_em_warmup="$EM_WARMUP" \
+    +surface_residual_mode="$RESIDUAL_MODE" \
+    +surface_filter_max_aspect="$FILTER_MAX_ASPECT" \
+    +surface_refine_sq="$REFINE_SQ" \
+    +surface_sq_anchor_weight="$SQ_ANCHOR_WEIGHT" \
     +surface_num_threads="$NUM_THREADS" \
     hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_surface_em_cov06' \
     ${VIZ_SAVE_INDEX:+viz_save_index=$VIZ_SAVE_INDEX}

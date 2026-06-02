@@ -69,9 +69,13 @@ def run_bundle_adjustment_mast3r_sq(cameras, points, observations,
                                     point_to_sq=None,
                                     lambda_surface=0.0,
                                     surface_huber=0.0,
+                                    residual_mode=0,
+                                    point_weights=None,
                                     max_num_iterations=200,
                                     num_threads=4,
-                                    function_tolerance=1e-6):
+                                    function_tolerance=1e-6,
+                                    refine_sq=False,
+                                    sq_anchor_weight=10.0):
     """Run MASt3R + superquadric Ceres BA. All arrays are modified **in place**.
 
     Surface-residual mode is engaged when ``lambda_surface > 0`` and both
@@ -81,6 +85,12 @@ def run_bundle_adjustment_mast3r_sq(cameras, points, observations,
     ``max_num_iterations`` / ``num_threads`` / ``function_tolerance`` expose the
     Ceres solver budget (defaults match the live benchmark; lower iterations or
     a looser tolerance trade a little accuracy for large speed-ups in sweeps).
+
+    ``refine_sq`` (default False -> identical to the frozen-pose behaviour)
+    lets Ceres optimise each used SQ's rigid pose ([aa(3), t(3)]) jointly with
+    cameras+points. ``sq_anchor_weight`` is the stiffness of a soft prior
+    pulling each refined SQ pose back to its SUPERDEC init (keeps the gauge
+    well-posed; ignored when refine_sq is False).
     """
     core = _load_core("mast3r_sq_ba_core")
     return core.run_bundle_adjustment(cameras, points, observations,
@@ -89,8 +99,10 @@ def run_bundle_adjustment_mast3r_sq(cameras, points, observations,
                                       verbose, fix_points,
                                       sq_params, point_to_sq,
                                       lambda_surface, surface_huber,
+                                      residual_mode, point_weights,
                                       max_num_iterations, num_threads,
-                                      function_tolerance)
+                                      function_tolerance,
+                                      refine_sq, sq_anchor_weight)
 
 
 def run_bundle_adjustment_vggt_sq(cameras, points, observations,
@@ -266,6 +278,12 @@ def mast3r_bundle_adjust(
         em_outer: int = 1,
         em_inner_iters: int = 200,
         em_warmup: bool = False,
+        residual_mode: int = 0,
+        filter_max_aspect: float = 0.0,
+        filter_min_axis: float = 0.01,
+        filter_max_axis: float = 2.0,
+        refine_sq: bool = False,
+        sq_anchor_weight: float = 10.0,
         num_threads: int = 4):
     """
     Refine VGGT-predicted poses with Ceres BA, using MASt3R as feature matcher.
@@ -331,7 +349,8 @@ def mast3r_bundle_adjust(
     if use_surface:
         from .superdec import (load_scene, transform_sqs, invert_sim3,
                                umeyama_sim3_pred_to_world,
-                               assign_points_to_sqs, pack_for_ceres)
+                               assign_points_to_sqs, pack_for_ceres,
+                               filter_degenerate_sqs)
         sq_world = load_scene(superdec_npz_path)
         if verbose:
             print(f"[mast3r_BA/surface] loaded {len(sq_world['scale'])} SQs from "
@@ -616,6 +635,9 @@ def mast3r_bundle_adjust(
             else:
                 sim3_g2p = invert_sim3(sim3_p2g)
                 sq_pred = transform_sqs(sq_world, sim3_g2p)
+                if filter_max_aspect and filter_max_aspect > 0.0:
+                    sq_pred = filter_degenerate_sqs(
+                        sq_pred, filter_min_axis, filter_max_axis, filter_max_aspect)
                 sq_pred_arg = sq_pred
                 point_to_sq_arg, dists = assign_points_to_sqs(
                     points, sq_pred, max_distance=assoc_max_distance)
@@ -684,6 +706,7 @@ def mast3r_bundle_adjust(
                 point_to_sq=point_to_sq_arg,
                 lambda_surface=lambda_surface if use_surface else 0.0,
                 surface_huber=surface_huber,
+                residual_mode=residual_mode,
                 num_threads=num_threads)
         elif backend == "mast3r_sq" and em_on:
             # EM-style iterated re-association: alternate E-step (re-assign the
@@ -712,6 +735,8 @@ def mast3r_bundle_adjust(
                     fix_points=False, sq_params=sq_params_arg,
                     point_to_sq=point_to_sq_arg,
                     lambda_surface=lambda_surface, surface_huber=surface_huber,
+                    residual_mode=residual_mode,
+                    refine_sq=refine_sq, sq_anchor_weight=sq_anchor_weight,
                     max_num_iterations=int(em_inner_iters),
                     num_threads=num_threads)
                 if verbose:

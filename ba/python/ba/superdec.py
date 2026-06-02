@@ -72,6 +72,36 @@ def load_scene(npz_path, exist_threshold: float = 0.5) -> dict:
     }
 
 
+def filter_degenerate_sqs(sq: dict, min_axis: float = 0.01,
+                          max_axis: float = 2.0,
+                          max_aspect: float = 20.0) -> dict:
+    """Drop degenerate superquadrics (slivers / razor-thin / huge boxes).
+
+    Keep SQ k iff min-scale-axis >= ``min_axis`` AND max-scale-axis <= ``max_axis``
+    AND aspect (max/min) <= ``max_aspect``. ~7.5% of SUPERDEC primitives are
+    slivers (aspect p99 ~115) that create wrong surface pulls. Subsets every
+    per-SQ array in lockstep so association/pack stay consistent. Never drops all
+    (returns the input unchanged if the mask would empty the set). Pass
+    ``max_aspect<=0`` upstream to disable.
+    """
+    scale = np.abs(np.asarray(sq["scale"], np.float64))   # (K, 3) half-extents
+    K = scale.shape[0]
+    if K == 0:
+        return sq
+    min_ax = scale.min(axis=1)
+    max_ax = scale.max(axis=1)
+    aspect = max_ax / np.clip(min_ax, 1e-12, None)
+    keep = (min_ax >= float(min_axis)) & (max_ax <= float(max_axis)) \
+        & (aspect <= float(max_aspect))
+    if not keep.any() or keep.all():
+        return sq
+    out = {}
+    for k, v in sq.items():
+        arr = np.asarray(v)
+        out[k] = arr[keep] if (arr.ndim >= 1 and arr.shape[0] == K) else v
+    return out
+
+
 def _radial_distance_world(points, sq) -> np.ndarray:
     """
     Compute SUPERDEC's radial-distance residual r(p) (meters) for every
