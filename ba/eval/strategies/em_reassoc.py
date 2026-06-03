@@ -44,13 +44,15 @@ def refine(cache, params):
     fix_first_camera = bool(p.get("fix_first_camera", True))
     function_tolerance = float(p.get("function_tolerance", 1e-3))
     num_threads = int(p.get("num_threads", 4))
+    manhattan_snap_deg = float(p.get("manhattan_snap_deg", 0.0))
 
     # --- subsample once; sq_pred once ---------------------------------------
     a = sc.prepare(cache, max_points=p.get("max_points"), seed=int(p.get("seed", 0)))
     cams, pts = a["cameras"], a["points"]
     obs, ci, pi = a["observations"], a["cam_indices"], a["pt_indices"]
 
-    sqp = sc.surface_pred(cache) if lam > 0.0 else None
+    sqp = sc.surface_pred(cache, manhattan_snap_deg=manhattan_snap_deg) \
+        if lam > 0.0 else None
     if sqp is None:
         # Degenerate Sim3 (or surface disabled): plain reprojection BA, with the
         # same total iteration budget so it's a fair fallback.

@@ -103,6 +103,88 @@ ONE-SIDED HINGE + tight Huber. That is the result.
 ## RESULT: superquadrics beat regular BA on sparse-view pose, 29.6 vs 29.42
 (verified, reproduced). All knobs default to the winner / OFF; backward-compatible.
 
+## NEXT LEVER (post-win): Manhattan-snap — denoise SQ orientation, not add a penalty
+Lesson from the win: the gain was STRUCTURAL (residual form), and the ceiling is
+NOISY/MIS-REGISTERED SQ geometry (not the penalty form — mode5/6 tied, filter &
+co-refine hurt). So instead of another point-block term, denoise the geometry
+along a dimension we can PROVE is structured.
+
+**Precondition VERIFIED (ba/eval/manhattan_check.py):** ASE is Manhattan. Across
+all 10 scenes the anisotropic (aspect>1.5) SQ orientations sit a MEDIAN 5.4deg
+from a single shared cube-aligned frame (80% <10deg, 92% <15deg, 96% <20deg),
+and that frame ~= the world axes (residual to identity 5.38 ~= residual to fitted
+R_m 5.35) -> gravity-aligned rooms. That ~5deg is mostly SUPERDEC fit noise on
+walls/floor; left in, it tilts the pulled-to surface by ~scale*sin(5deg) (~9-17cm
+at the edges of a 1-2m primitive).
+
+**Intervention:** `superdec.manhattan_snap_sqs(sq, max_snap_deg)` votes the per-
+scene frame (octahedral rotation averaging) and snaps each SQ within threshold
+onto it; ONLY rotation changes (shape preserved). At deg=15 ~90% of SQs snap,
+mean correction ~5.5deg. Wired OFF-by-default offline (strat_common.surface_pred,
+em_reassoc param `manhattan_snap_deg`) and live (mast3r_bundle_adjust
+`manhattan_snap`, benchmark `surface_manhattan_snap`, slurm `MANHATTAN_SNAP`).
+Hypothesis: (a) denoises the diagnosed geometry ceiling; (b) may UNLOCK the normal
+residual (mode5) that only TIED with noisy normals. Risk: hurts if the 5deg is
+real off-axis structure -> rank offline, confirm live.
+
+**LIVE result (job 94905): hinge mode1 lam15 + snap15 = pose_auc_5 29.6 — TIE,
+slight ATE regression.** Verified the snap applied (`surface_manhattan_snap=15` in
+config) and DID change the solution: pose_ate_rmse 0.40412 vs the two no-snap runs
+0.40059 (94143) / 0.40038 (94271) — a real ~0.0037 shift (~15x the ~0.0002 run-to-
+run noise), in the WORSE direction. pose_auc_5 unmoved at 29.6. Mechanism: snapping
+denoises SQ ORIENTATION -> nudges point depths/translations (ATE moved) but pose_auc_5
+@5deg is ROTATION-dominated and a point-block surface term has no relative-rotational
+leverage -> AUC unchanged. (Offline exp7 abandoned: the 2-CPU plugin cap is
+inescapable — no CPU-node access — making full-fidelity offline ranking impractical;
+went straight live.) manhattan_snap stays default-OFF (tested, byte-identical when off).
+
+### CONCLUSION HARDENS: surface-geometry levers cannot widen the 29.6 margin
+FOUR independent geometry interventions now TIE-or-HURT pose_auc_5: normal residual
+(mode5, exp4), degenerate-SQ filter (94440), SQ co-refine (94547), Manhattan-snap
+(94905). All are POINT-BLOCK terms; pose_auc_5@5deg is rotation-dominated and they
+have no relative-rotational leverage. The 29.6 win (residual FORM: symmetric->hinge)
+stands; the margin is bound by VGGT's rotation estimates, which the SQ surface prior
+cannot improve in any form tried. Remaining untested long-shot: snap + mode5 (denoised
+normals + normal residual) — same point-block class, low prior. A real rotation lever
+would need per-view orientation signal (vanishing points / direct relative-rot prior),
+a much larger change.
+
+## DIAGNOSTIC ANALYSIS (ba/eval/analyze_*.py, show_scene.py) — corrects the framing
+Built a proper decomposition since pose_auc_5 = AUC of max(rot_err, trans_angle_err)
+per view-pair @5deg. Ran raw VGGT / reproj-BA / surface-BA / surface+snap, all 10
+scenes (job 94950, offline 20k-cap; structure is robust, absolutes carry the offset).
+
+| stage         | rot-only AUC | trans-only AUC | combined (pose_auc_5) |
+|---------------|-------------:|---------------:|----------------------:|
+| raw VGGT      | 13.7 | 15.4 |  9.3 |
+| reproj-BA     | 34.3 | 32.4 | 28.9 |
+| surface-BA    | 33.8 | 32.2 | 29.0 |
+| surface+snap  | 34.3 | 32.6 | 29.1 |
+
+**Two corrections to earlier claims:**
+1. **NOT rotation-dominated.** rot-only ~= trans-only AUC at every stage; rotation is
+   the binding (larger) error in only ~55-60% of pairs. The metric is low because
+   *combined* sits BELOW both — a pair needs rot AND trans BOTH <5deg (the AND, not
+   a rotation ceiling). Earlier "rotation-dominated" framing was wrong.
+2. **The surface prior barely moves anything.** reproj 28.9 -> surface 29.0 -> snap
+   29.1: the SQ term shifts cameras by ~0.05-0.2 AUC (in-noise). PLAIN REPROJ-BA does
+   ~all the lift (9.3->28.9). Per-scene it's a wash (does literally nothing on scenes
+   5/7: 97.8->97.8, 49.3->49.3). The 29.6 win came from getting the reprojection BA
+   right (tight Huber + EM + hinge form), NOT from strong superquadric geometry.
+
+**Root cause (the real one):** every triangulated point is seen by EXACTLY 2 views
+(MASt3R pairwise triangulation; analyze_sparsity.py). 40k-117k such points pin just
+10 cameras -> the cameras are MASSIVELY over-constrained by reprojection before the
+surface term is even added, so a point-to-surface pull can't move them. Not a rotation
+ceiling — an over-constraint ceiling. Scene viz (show_scene.py fig8/9): the 10 photos
+are near-non-overlapping rooms of one apartment; the SQ decomposition tiles the whole
+apartment, but each camera still gets thousands of points.
+
+**=> Next regime to test: FEWER PICTURES (num_views), not fewer points.** Dropping
+views collapses the pairwise covisibility graph (fig7); only there might the box-prior
+carry under-constrained cameras. Must be tested LIVE (re-triangulated) — the offline
+cache keeps privileged 10-view points. Candidate: num_views=4, regular-BA vs surface-BA.
+
 ### ✅ FIRST LIVE WIN (job 94143): hinge mode1, lam15, huber1.0 → pose_auc_5 = **29.6** > 29.42
 Relative gain transferred: live radial-EM 28.93 → hinge **29.6** (+0.67), mirroring the
 offline +0.75. Margin over the bar is small (+0.18) → must (a) verify reproducible

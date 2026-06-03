@@ -284,6 +284,7 @@ def mast3r_bundle_adjust(
         filter_max_axis: float = 2.0,
         refine_sq: bool = False,
         sq_anchor_weight: float = 10.0,
+        manhattan_snap: float = 0.0,
         num_threads: int = 4):
     """
     Refine VGGT-predicted poses with Ceres BA, using MASt3R as feature matcher.
@@ -350,7 +351,7 @@ def mast3r_bundle_adjust(
         from .superdec import (load_scene, transform_sqs, invert_sim3,
                                umeyama_sim3_pred_to_world,
                                assign_points_to_sqs, pack_for_ceres,
-                               filter_degenerate_sqs)
+                               filter_degenerate_sqs, manhattan_snap_sqs)
         sq_world = load_scene(superdec_npz_path)
         if verbose:
             print(f"[mast3r_BA/surface] loaded {len(sq_world['scale'])} SQs from "
@@ -638,6 +639,8 @@ def mast3r_bundle_adjust(
                 if filter_max_aspect and filter_max_aspect > 0.0:
                     sq_pred = filter_degenerate_sqs(
                         sq_pred, filter_min_axis, filter_max_axis, filter_max_aspect)
+                if manhattan_snap and manhattan_snap > 0.0:
+                    sq_pred = manhattan_snap_sqs(sq_pred, max_snap_deg=manhattan_snap)
                 sq_pred_arg = sq_pred
                 point_to_sq_arg, dists = assign_points_to_sqs(
                     points, sq_pred, max_distance=assoc_max_distance)

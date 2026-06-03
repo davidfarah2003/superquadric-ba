@@ -61,3 +61,7 @@ data/
 # (different project, has its own .git inside)
 # =============================================================================
 /ba/checkpoints/
+
+# Generated diagnostic figures + data (regenerable from ba/eval/analyze_*.py;
+# findings are recorded in ba/eval/EXPERIMENTS.md)
+/ba/eval/analysis/

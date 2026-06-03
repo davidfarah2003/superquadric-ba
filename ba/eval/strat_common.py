@@ -26,6 +26,7 @@ from ba.superdec import (  # noqa: E402
     transform_sqs,
     assign_points_to_sqs,
     pack_for_ceres,
+    manhattan_snap_sqs,
 )
 
 
@@ -59,17 +60,25 @@ def prepare(cache, max_points=None, seed=0):
                 cam_indices=ci, pt_indices=pi, keep=keep)
 
 
-def surface_pred(cache):
+def surface_pred(cache, manhattan_snap_deg=0.0, manhattan_min_aspect=1.5):
     """Return the superquadrics in the PREDICTED-world frame, or None.
 
     None means the Sim3 (predicted->GT camera centres) was degenerate, in which
     case the surface term must be skipped (matches live behaviour).
+
+    ``manhattan_snap_deg > 0`` snaps near-axis-aligned SQ orientations onto the
+    per-scene voted Manhattan frame (denoises SUPERDEC's orientation fit); 0
+    (default) leaves orientations untouched -> byte-identical to the live path.
     """
     sim3 = umeyama_sim3_pred_to_world(cache["cam_centres"], cache["gt_centres"])
     if sim3 is None:
         return None
     sq_world = load_scene(cache["superdec_npz_path"])
-    return transform_sqs(sq_world, invert_sim3(sim3))
+    sq_pred = transform_sqs(sq_world, invert_sim3(sim3))
+    if manhattan_snap_deg and manhattan_snap_deg > 0.0:
+        sq_pred = manhattan_snap_sqs(sq_pred, max_snap_deg=manhattan_snap_deg,
+                                     min_aspect=manhattan_min_aspect)
+    return sq_pred
 
 
 def associate(points, sq_pred, assoc_max_distance):

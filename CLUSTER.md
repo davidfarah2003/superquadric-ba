@@ -59,22 +59,38 @@ The cluster uses **Slurm** for job scheduling. Always use Slurm — do not run G
 Request a specific GPU type with `--gpus=<name>:<count>`, e.g. `--gpus=5060ti:1`.
 Without a specific type (`--gpus=1`), Slurm assigns by priority (5060 Ti first).
 
-> **Gotcha (requesting more CPU cores) — POLICY TIGHTENED 2026-06-02**: the
-> job_submit plugin now **blocks ALL** core-request mechanisms on GPU jobs:
-> `--cpus-per-task` ("Specifying TRES per task is not allowed"), `--ntasks=N`
-> ("Requested node configuration is not available"), AND `--cpus-per-gpu`
-> ("Specifying CPUs per GRES is not allowed. Invalid generic resource (gres)
-> specification"). Plain `--gpus=TYPE:1` now grants a fixed **4 CPUs** (was 2).
-> There is currently NO way to get more than 4 CPUs on a GPU job. Earlier in the
-> day `--cpus-per-gpu=N` worked (jobs got up to 32 cores); that window is closed.
-> Consequence: CPU-bound offline Ceres eval must use `jobs<=4` scene-parallelism
-> (or `num_threads<=4`); the live benchmark is GPU-bound so 4 CPUs is fine, just
-> a slower BA tail. Do NOT put `--cpus-per-gpu` in batch scripts — it now makes
-> the whole submit fail.
+> **Gotcha (CPU cores on GPU jobs are capped at 2/GPU) — root cause confirmed
+> 2026-06-02**: the cap is NOT hardware (5060ti nodes have **28** cores, 2080ti
+> have 36). It is policy, two parts (verified via `scontrol show config`):
+>   1. `JobDefaults = DefCpuPerGPU=2` — each requested GPU comes with **2 CPUs**
+>      by default (so a 1-GPU job gets exactly 2; the doc's earlier "4" was wrong).
+>   2. `JobSubmitPlugins = lua` — the site Lua plugin attaches a GPU to jobs in
+>      the GPU partitions AND rejects every flag that would raise the core count:
+>      `--cpus-per-task` ("Specifying TRES per task is not allowed"), `--ntasks=N`
+>      ("Requested node configuration is not available"), `--cpus-per-gpu`
+>      ("Specifying CPUs per GRES is not allowed").
+> So on a 1-GPU job you are pinned to **2 CPUs** and cannot climb toward 28.
+> (Earlier in the day `--cpus-per-gpu=N` reached 28/32; the plugin update closed
+> that.) Rationale: 8 GPUs × 28 cores ≈ 3.5 cores/GPU and billing is GPU-only
+> (`TRESBillingWeights GRES/gpu=1, CPU=0`); pinning CPUs∝GPUs keeps all 8 GPUs on
+> a node independently schedulable. Do NOT put `--cpus-per-gpu` in batch scripts.
+>
+> **→ The 2-CPU cap is INESCAPABLE for us — no CPU-only route (verified
+> 2026-06-02).** A CPU-only `interactive-cpu` partition exists (`studcpu-node01/
+> 02/03`, 44 cores each, no GPU) BUT our account cannot use it: a dry-run
+> `sbatch --test-only --partition=interactive-cpu` is silently **rewritten by the
+> Lua plugin to partition `jobs` on a GPU node with 2 CPUs**. The plugin forces
+> every job from account `3dv` onto the GPU partition and overrides `--partition`
+> (and `--nodelist`/`--exclude`). So: full access to GPU nodes, **none to CPU
+> nodes**, and no way past `DefCpuPerGPU=2`. Consequence: CPU-bound offline Ceres
+> eval is stuck at 2 cores (`jobs<=2`, or `num_threads=2` per solve) — full-
+> fidelity ranking is impractically slow (~4 min per 117k-pt scene). Prefer
+> validating candidate configs **live** (GPU-bound, the 2 CPUs only slow the BA
+> tail) over large offline sweeps.
 
 > **Gotcha**: 1-job-per-user QOS limit (`QOSMaxJobsPerUserLimit`) — only one job runs/queues at a time. Plan long jobs accordingly; a second `sbatch` pends until the first finishes.
 
-> **Gotcha (bad nodes — cu130 driver)**: some 5060ti nodes intermittently fail `torch.cuda` init in ~30–60 s with `RuntimeError: Error 804: forward compatibility was attempted on non supported HW` (or `Error 101: invalid device ordinal`). Observed on `studgpu-node09` (persistent) and intermittently on `studgpu-node01` and `studgpu-node25` (2026-06-02). The set of bad nodes drifts. If a GPU job crashes instantly with error 804/101, resubmit excluding the offender(s), e.g. `--exclude=studgpu-node09,studgpu-node01,studgpu-node25`, or pin a known-good one with `--nodelist=studgpu-node17`. 2080ti nodes (node05/13/21) have been reliable for CPU-only jobs.
+> **Gotcha (bad nodes — cu130 driver)**: some 5060ti nodes intermittently fail `torch.cuda` init in ~30–60 s with `RuntimeError: Error 804: forward compatibility was attempted on non supported HW` (or `Error 101: invalid device ordinal`). Observed on `studgpu-node09` (persistent) and intermittently on `studgpu-node01` and `studgpu-node25` (2026-06-02). The set of bad nodes drifts. If a GPU job crashes instantly with error 804/101, just resubmit and hope for a healthier node — note the Lua plugin **often overrides `--exclude` / `--nodelist`** (observed 2026-06-02: a job pinned to `--nodelist=studgpu-node17` ran on node09 anyway), so node pinning is unreliable. node09 was flaky earlier in the day but **recovered** by evening (a live VGGT+BA job ran on it cleanly), confirming the bad-node set drifts hour to hour.
 
 ### Interactive GPU Session
 
