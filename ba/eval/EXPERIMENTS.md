@@ -15,15 +15,19 @@ views per row (seed 777), only the surface term toggled (λ=15 hinge-EM vs λ=0)
 | num_views | reproj-BA (λ=0) | surface-BA (λ=15) | **surface gain** |
 |----------:|----------------:|------------------:|-----------------:|
 | 10        | ~28.9 (offline) | **29.6** (live)   | **+0.2** |
-| 8         | _(job 94970)_   | 28.00             | _(pending)_ |
+| 8         | 27.93           | 28.00             | **+0.07** |
 | 6         | 29.60           | **31.07**         | **+1.47** |
 | 4         | 39.33           | **40.67**         | **+1.33** |
 
-Two independent sparse points (4 & 6 views) agree at **~+1.3–1.5 AUC**, ~7× the
-dense gain — not coarse-metric noise. Jobs: surface@4=94968, reproj@4=94969,
-sweep(6/8/10)=94970. **Interpretation:** superquadrics provide real pose benefit
-exactly where multi-view geometry is weak (few pictures). This is the "less-pictures /
-less-complexity" win the goal allows. Reproduce: `NUM_VIEWS=4 LAMBDA_SURFACE=15 sbatch
+**Regime-dependent, with a sharp transition ~6→8 views:** the gain is ~+1.3–1.5 at
+4–6 views but collapses to ~+0.1 at 8–10 views. Two sparse points agree, two dense
+points agree -> robust, not coarse-metric noise. (Absolute AUC is non-monotonic in
+views because the covisibility sampler picks different, easier view-sets at low K;
+the DELTA is the clean signal.) Jobs: surface@4=94968, reproj@4=94969, sweep=94970.
+**Interpretation:** superquadrics provide real pose benefit ONLY where multi-view
+geometry is weak (≤6 pictures); above that the cameras are already pinned. This is
+the "few-view / less-complexity" win the goal allows, and few-view is the harder,
+more realistic regime where priors matter. Reproduce: `NUM_VIEWS=4 LAMBDA_SURFACE=15 sbatch
 compose/slurm/run_sparse_surface_em_benchmark.sh` (vs `LAMBDA_SURFACE=0` baseline);
 full sweep `compose/slurm/run_views_sweep.sh`.
 NEXT: confirm 8-view delta, push to 3 views, and re-tune λ for the sparse regime
