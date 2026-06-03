@@ -56,6 +56,7 @@ FILTER_MAX_ASPECT="${FILTER_MAX_ASPECT:-0}"       # >0 drops degenerate SQs (e.g
 REFINE_SQ="${REFINE_SQ:-false}"                   # true = co-refine SQ pose in BA
 SQ_ANCHOR_WEIGHT="${SQ_ANCHOR_WEIGHT:-10.0}"      # stiffness of SQ-pose anchor prior
 MANHATTAN_SNAP="${MANHATTAN_SNAP:-0}"             # >0 = snap SQ orient to voted Manhattan frame (deg; denoise)
+NUM_VIEWS="${NUM_VIEWS:-10}"                       # cameras per scene (fewer-pictures sweep: 4/6/8)
 NUM_THREADS="${NUM_THREADS:-4}"                   # Ceres BA threads (4-CPU cap now)
 VIZ_SAVE_INDEX="${VIZ_SAVE_INDEX:-}"
 
@@ -68,7 +69,7 @@ python3 benchmarking/sparse_view/benchmark.py \
     machine=student_cluster \
     dataset=benchmark_518_ase_wai \
     dataset.num_workers=4 \
-    dataset.num_views=10 \
+    dataset.num_views="$NUM_VIEWS" \
     batch_size=1 \
     model=vggt \
     bundle_adjustment=superbundle_surface \
@@ -87,7 +88,7 @@ python3 benchmarking/sparse_view/benchmark.py \
     +surface_sq_anchor_weight="$SQ_ANCHOR_WEIGHT" \
     +surface_manhattan_snap="$MANHATTAN_SNAP" \
     +surface_num_threads="$NUM_THREADS" \
-    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_surface_em_cov06' \
+    hydra.run.dir="/work/courses/3dv/team39/logs/benchmark_ase_sparse_surface_em_cov06_v${NUM_VIEWS}_lam${LAMBDA_SURFACE}" \
     ${VIZ_SAVE_INDEX:+viz_save_index=$VIZ_SAVE_INDEX}
 
 echo "=== Benchmark complete ==="
