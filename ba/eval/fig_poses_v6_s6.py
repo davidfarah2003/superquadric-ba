@@ -90,20 +90,41 @@ def _auc(run):
     return v[0] if isinstance(v, list) else v
 
 
-def _panel(ax, fr, title, badge_color):
+def _unit(v):
+    n = np.linalg.norm(v)
+    return v / n if n > 1e-9 else v
+
+
+def _ray(ax, c, d, L, color, z):
+    """thin heading needle from camera centre c along unit dir d, length L."""
+    d = _unit(d)
+    ax.annotate("", xy=(c[0] + L * d[0], c[1] + L * d[1]), xytext=(c[0], c[1]),
+                arrowprops=dict(arrowstyle="-|>", color=color, lw=4.2, shrinkA=0,
+                                shrinkB=0, mutation_scale=22), zorder=z)
+
+
+def _panel(ax, fr, title, accent, L):
     gc, gf, pc, pf, rot = fr
-    sc = 9
-    for v in range(gc.shape[0]):
-        ax.plot([gc[v, 0], pc[v, 0]], [gc[v, 1], pc[v, 1]], "-", color="0.65", lw=1.3, zorder=2)
-    ax.quiver(gc[:, 0], gc[:, 1], gf[:, 0], gf[:, 1], color=GT_C, angles="xy", scale=sc, width=0.016, zorder=3)
-    ax.quiver(pc[:, 0], pc[:, 1], pf[:, 0], pf[:, 1], color=PR_C, angles="xy", scale=sc, width=0.016, zorder=3)
-    ax.scatter(gc[:, 0], gc[:, 1], c=GT_C, s=150, marker="^", edgecolor="k", lw=0.8, zorder=5)
-    ax.scatter(pc[:, 0], pc[:, 1], c=PR_C, s=130, marker="o", edgecolor="k", lw=0.8, zorder=5)
-    ax.set_title(title, fontsize=21, fontweight="bold", color=DARK, pad=10)
-    ax.text(0.05, 0.97, f"{rot:.0f}$^\\circ$", transform=ax.transAxes, ha="left", va="top",
-            fontsize=40, fontweight="bold", color=badge_color)
-    ax.text(0.06, 0.80, "mean\nrotation error", transform=ax.transAxes, ha="left", va="top",
-            fontsize=13.5, color="#6F6F6F", linespacing=1.1)
+    n = gc.shape[0]
+    # position-error connectors (faint, behind everything)
+    for v in range(n):
+        ax.plot([gc[v, 0], pc[v, 0]], [gc[v, 1], pc[v, 1]], "-", color="#C3C7CD",
+                lw=1.6, zorder=1, solid_capstyle="round")
+    # heading needles: ground truth then estimate (estimate on top)
+    for v in range(n):
+        _ray(ax, gc[v], gf[v], L, GT_C, 3)
+    for v in range(n):
+        _ray(ax, pc[v], pf[v], L, PR_C, 4)
+    # small camera markers at the needle tails
+    ax.scatter(gc[:, 0], gc[:, 1], c=GT_C, s=46, marker="^", edgecolor="white", lw=1.1, zorder=5)
+    ax.scatter(pc[:, 0], pc[:, 1], c=PR_C, s=42, marker="o", edgecolor="white", lw=1.1, zorder=6)
+    ax.set_title(title, fontsize=21, fontweight="bold", color=DARK, pad=12)
+    # error badge: fixed top-right corner, white rounded box (never overlaps the cameras)
+    ax.text(0.965, 0.95, f"{rot:.0f}$^\\circ$", transform=ax.transAxes, ha="right", va="top",
+            fontsize=33, fontweight="bold", color=accent, zorder=11,
+            bbox=dict(boxstyle="round,pad=0.32", fc="white", ec=accent, lw=1.6, alpha=0.95))
+    ax.text(0.965, 0.785, "mean rotation error", transform=ax.transAxes, ha="right", va="top",
+            fontsize=12.5, color="#6F6F6F", zorder=11)
     ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
     for s in ax.spines.values():
         s.set_color("#DEE0E4"); s.set_linewidth(1.5)
@@ -120,21 +141,24 @@ def main():
     a, b = sorted(int(i) for i in np.argsort(spread)[-2:])
     fv, fb, fo = (_frame(p, gt, a, b) for p in (vggt, base, ours))
 
-    fig, axs = plt.subplots(1, 3, figsize=(19.8, 6.4))
-    _panel(axs[0], fv, "VGGT-only (feed-forward)", PR_C)
-    _panel(axs[1], fb, "+ bundle adjustment", "#555555")
-    _panel(axs[2], fo, "+ super-quadric prior (Ours)", GT_C)
-
     allx = np.concatenate([np.r_[f[0][:, 0], f[2][:, 0]] for f in (fv, fb, fo)])
     ally = np.concatenate([np.r_[f[0][:, 1], f[2][:, 1]] for f in (fv, fb, fo)])
-    mx, my = 0.16 * (allx.max() - allx.min()), 0.16 * (ally.max() - ally.min())
+    mx, my = 0.18 * (allx.max() - allx.min()), 0.18 * (ally.max() - ally.min())
+    xr, yr = (allx.max() - allx.min()) + 2 * mx, (ally.max() - ally.min()) + 2 * my
+    L = 0.11 * max(xr, yr)   # uniform heading-needle length, in data units
+
+    fig, axs = plt.subplots(1, 3, figsize=(19.8, 6.4))
+    _panel(axs[0], fv, "VGGT-only (feed-forward)", PR_C, L)
+    _panel(axs[1], fb, "+ bundle adjustment", "#555555", L)
+    _panel(axs[2], fo, "+ super-quadric prior (Ours)", GT_C, L)
     for ax in axs:
         ax.set_xlim(allx.min() - mx, allx.max() + mx); ax.set_ylim(ally.min() - my, ally.max() + my)
 
-    handles = [Line2D([0], [0], marker="^", color="w", markerfacecolor=GT_C, markeredgecolor="k", markersize=15, label="ground-truth camera"),
-               Line2D([0], [0], marker="o", color="w", markerfacecolor=PR_C, markeredgecolor="k", markersize=14, label="estimated camera"),
-               Line2D([0], [0], color="0.65", lw=2, label="position error")]
-    fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
+    handles = [Line2D([0], [0], marker="^", color="w", markerfacecolor=GT_C, markeredgecolor="white", markersize=15, label="ground-truth camera"),
+               Line2D([0], [0], marker="o", color="w", markerfacecolor=PR_C, markeredgecolor="white", markersize=14, label="estimated camera"),
+               Line2D([0], [0], color=DARK, lw=4.0, marker=">", markersize=12, label="camera heading"),
+               Line2D([0], [0], color="#C3C7CD", lw=2.6, label="position error")]
+    fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(OUT, dpi=150, bbox_inches="tight", facecolor="white")
     print(f"wrote {OUT}")
