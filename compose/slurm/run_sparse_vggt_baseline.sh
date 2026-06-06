@@ -29,7 +29,7 @@ python3 benchmarking/sparse_view/benchmark.py \
     model=vggt \
     bundle_adjustment=none \
     sparse_covisibility_thres=0.6 \
-    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_vggt_testviz' \
+    hydra.run.dir='/work/courses/3dv/team39/logs/benchmark_ase_sparse_vggt' \
     ${VIZ_SAVE_INDEX:+viz_save_index=$VIZ_SAVE_INDEX}
 
 echo "=== Benchmark complete ==="

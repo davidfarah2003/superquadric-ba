@@ -1,0 +1,12 @@
+# LaTeX build intermediates
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+missfont.log
+# keep poster.tex, figures/, README.md, and the final poster.pdf
