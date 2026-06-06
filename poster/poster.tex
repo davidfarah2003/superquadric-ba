@@ -18,6 +18,7 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.16}
 \usepackage{xcolor}
+\usepackage{colortbl}
 
 %------------------------------------------------------------------ colours
 \definecolor{ETHBlue}{HTML}{215CAF}
@@ -42,8 +43,7 @@
 \setlength{\columnsep}{\gutter}
 \newlength{\colwidth}
 \setlength{\colwidth}{\dimexpr0.5\paperwidth-\margin-0.5\gutter\relax}
-\newlength{\colheight}\setlength{\colheight}{63.0cm}
-\newcommand{\flexgap}{\vspace{\gutter}\vfill}
+\newcommand{\flexgap}{\vspace{\gutter}}   % fixed, consistent gap between cards
 
 %------------------------------------------------------------------ canvas
 \usetheme{default}
@@ -121,7 +121,6 @@
 
 %---------------------------------------------------------------- LEFT COLUMN
 \begin{column}{\colwidth}
-\begin{minipage}[t][\colheight][t]{\linewidth}
 
   \begin{psection}{Introduction}
     Recent advancements in transformer-based Structure from Motion (SfM) took the
@@ -202,58 +201,73 @@
     $\lambda$ the prior weight [5]. \textbf{Metric:} pose AUC@5$^\circ$.}
   \end{psection}
 
-\end{minipage}
 \end{column}
 %---------------------------------------------------------------- RIGHT COLUMN
 \begin{column}{\colwidth}
-\begin{minipage}[t][\colheight][t]{\linewidth}
 
   \begin{psection}{Results}
     Three configurations: \textbf{VGGT-only} (feed-forward poses, AUC@5
     $=9.3$), \textbf{Baseline} (reprojection BA), and \textbf{Ours} (BA + the
     super-quadric prior). \textbf{The prior's benefit grows as the input gets
     sparser} --- the realistic relocalization regime.
-    \vskip0.9ex
+    \vskip1.2ex
+    % ---- hero chart: full width grouped bars ----
     \begin{center}
-    \begin{minipage}{0.5\colwidth}
-      \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart,
-          ybar, bar width=0.95cm, enlarge x limits=0.28,
-          title={Pose AUC@5 vs.\ \# views},
+        \begin{axis}[posterchart, width=0.9\linewidth, height=13cm,
+          ybar, bar width=1.7cm, enlarge x limits=0.32,
+          title={Pose AUC@5 vs.\ number of input views},
           symbolic x coords={4,6,8}, xtick=data,
           xlabel={Number of input views}, ylabel={AUC@5 ($\%$)},
           ymin=0, ymax=48,
-          nodes near coords, every node near coord/.append style={font=\small,/pgf/number format/.cd,fixed,fixed zerofill,precision=1},
-          legend style={font=\normalsize,at={(0.5,1.18)},anchor=south,legend columns=2,draw=none,/tikz/every even column/.append style={column sep=6mm}},
+          nodes near coords, every node near coord/.append style={font=\normalsize,/pgf/number format/.cd,fixed,fixed zerofill,precision=1},
+          legend style={font=\normalsize,at={(0.985,0.985)},anchor=north east,draw=CardEdge,fill=white,fill opacity=0.9,text opacity=1},
           legend cell align=left,
         ]
           \addplot[fill=BarGray,draw=BarGray!70!black] coordinates {(4,39.3)(6,29.6)(8,27.9)};
           \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,40.7)(6,31.1)(8,28.0)};
-          \legend{Baseline,Ours}
+          \legend{Baseline (reproj.\ BA),Ours (+ prior)}
         \end{axis}
-      \end{tikzpicture}\\[0.2ex]
-      \cpt{Ours $\geq$ Baseline at every view count.}
-    \end{minipage}\hfill
-    \begin{minipage}{0.5\colwidth}
+      \end{tikzpicture}
+    \end{center}
+    \vskip1.0ex
+    % ---- gain chart + results table side by side ----
+    \begin{minipage}[c]{0.52\colwidth}
       \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart,
-          ybar, bar width=0.85cm, enlarge x limits=0.18,
-          title={Gain from prior ($\Delta$AUC@5)},
+        \begin{axis}[posterchart, height=9.5cm,
+          ybar, bar width=1.2cm, enlarge x limits=0.2,
+          title={Gain from the prior ($\Delta$AUC@5)},
           symbolic x coords={4,6,8,10}, xtick=data,
           xlabel={Number of input views}, ylabel={$\Delta$ AUC@5 (pp)},
-          ymin=0, ymax=2.0,
+          ymin=0, ymax=1.9,
           nodes near coords={\textbf{+\pgfmathprintnumber{\pgfplotspointmeta}}},
-          every node near coord/.append style={font=\small,color=ETHBlueDark,/pgf/number format/.cd,fixed,precision=1},
+          every node near coord/.append style={font=\normalsize,color=ETHBlueDark,/pgf/number format/.cd,fixed,precision=1},
         ]
           \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,1.3)(6,1.5)(8,0.1)(10,0.2)};
         \end{axis}
-      \end{tikzpicture}\\[0.2ex]
-      \cpt{$7\times$ larger at 6 views than at 10.}
+      \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}[c]{0.44\colwidth}
+      \centering
+      \renewcommand{\arraystretch}{1.35}
+      {\normalsize
+      \begin{tabular}{lcccc}
+        \toprule
+        AUC@5 (\%) & \multicolumn{4}{c}{\# input views}\\
+        \cmidrule(l){2-5}
+                 & 4 & 6 & 8 & 10\\
+        \midrule
+        VGGT-only & \multicolumn{4}{c}{9.3}\\
+        Baseline & 39.3 & 29.6 & 27.9 & 29.4\\
+        \rowcolor{BlueTint}\textbf{Ours} & \textbf{40.7} & \textbf{31.1} & \textbf{28.0} & \textbf{29.6}\\
+        \midrule
+        $\Delta$ & \textcolor{ETHBlue}{\textbf{+1.3}} & \textcolor{ETHBlue}{\textbf{+1.5}} & +0.1 & +0.2\\
+        \bottomrule
+      \end{tabular}}\\[0.6ex]
+      \cpt{Up to $+2.0$ at 4 views with light $\lambda$ tuning.}
     \end{minipage}
-    \end{center}
-    \vskip0.7ex
+    \vskip1.0ex
     \begin{beamercolorbox}[wd=\linewidth,sep=0.5cm,rounded=true,center]{block title}
       \large\bfseries\color{ETHBlueDark}
       +1.5 AUC@5 at 6 views ($\approx$5\% relative) vs.\ +0.2 at 10 views
@@ -291,7 +305,6 @@
     \noindent [5] Mueller et al., \emph{Reconstructing People, Places, and Cameras}. CVPR 2025.\par}
   \end{block}
 
-\end{minipage}
 \end{column}
 \end{columns}
 \end{frame}
