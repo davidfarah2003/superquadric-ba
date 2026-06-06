@@ -1,6 +1,7 @@
 %==============================================================================
 % ETH Zurich -- 3D Vision poster  (A1, portrait)
 % Light theme: light-grey page, white rounded cards, ETH-blue accents.
+% Hybrid "Better Poster": full-width takeaway band + scientific two-column body.
 % Compiles with pdflatex (two passes).
 %==============================================================================
 \documentclass[final]{beamer}
@@ -19,6 +20,10 @@
 \pgfplotsset{compat=1.16}
 \usepackage{xcolor}
 \usepackage{colortbl}
+\usepackage{qrcode}
+
+% TODO: point this at the public repo / project report before printing.
+\newcommand{\posterurl}{https://github.com/eth-3dv-team39/relocalization-prior}
 
 %------------------------------------------------------------------ colours
 \definecolor{ETHBlue}{HTML}{215CAF}
@@ -117,60 +122,67 @@
 %==============================================================================
 \begin{document}
 \begin{frame}[t]
+
+%---------------------------------------------------------------- TAKEAWAY BAND
+{\centering
+\begin{beamercolorbox}[wd=\textwidth,sep=0pt,center]{}
+  \begin{tikzpicture}
+    \node[rounded corners=10pt,fill=ETHBlue,text=white,inner sep=0.7cm,
+          text width=\dimexpr\textwidth-1.4cm\relax,align=center] {
+      {\huge\bfseries A super-quadric environment prior corrects camera poses exactly where
+       feed-forward SfM is weakest --- sparse, low-overlap views.}\\[4mm]
+      {\LARGE \textbf{+1.5} AUC@5$^\circ$ at 6 views \;(up to \textbf{+2.0} at 4)
+       \;---\; vs.\ only +0.2 at 10 views}
+    };
+  \end{tikzpicture}
+\end{beamercolorbox}\par}
+\vskip0.9cm
+
 \begin{columns}[t,onlytextwidth]
 
 %---------------------------------------------------------------- LEFT COLUMN
 \begin{column}{\colwidth}
 
-  \begin{psection}{Introduction}
-    Recent advancements in transformer-based Structure from Motion (SfM) took the
-    3D-Vision community by storm [1]. Combining fast inference times with strong
-    accuracy, they outperform traditional feature-matching + bundle adjustment
-    (BA) pipelines in many settings [3].
-    \vskip0.6ex
-    In relocalization problems such as the ''kidnapped robot'' scenario, accurate
-    camera pose estimation becomes the main objective while a prior on the
-    environment, such as a point cloud, exists. Current transformer-based SfM
-    approaches cannot exploit such priors.
-    \vskip0.6ex
-    This work combines transformer-based SfM with such a prior, encoded as a
-    \textbf{super-quadric cloud} [4]. Super-quadrics are versatile geometric
-    primitives that give a denser, more compact description of the environment's
-    topology than raw point clouds.
+  \begin{psection}{The Problem}
+    In relocalization (the ``kidnapped robot''), camera pose must be recovered
+    accurately \emph{given} a known environment. Transformer-based SfM (e.g.\
+    VGGT [1]) gives fast, strong feed-forward poses but \textbf{cannot exploit
+    such a prior} --- and it degrades when views are few and barely overlap.
+    We bridge this gap with a \textbf{super-quadric} scene prior [4].
   \end{psection}
 
   \flexgap
 
   \begin{psection}{Method Overview}
-    \vskip0.5cm
+    \vskip0.2cm
     \centering
     \begin{tikzpicture}[
         box/.style={draw=ETHBlue,line width=1.1pt,rounded corners=5pt,fill=white,
-                    minimum height=2.6cm,minimum width=8.8cm,align=center,font=\large},
+                    minimum height=2.1cm,minimum width=8.8cm,align=center,font=\large},
         io/.style={box,draw=ETHGrey!60,fill=BlueTint},
         arr/.style={draw=ETHText,line width=1.4pt,-{Latex[length=4.5mm,width=3.5mm]}},
         lbl/.style={font=\small\itshape,color=ETHGrey,align=center,fill=white,inner sep=1.5pt}]
       \node[io]  (frames) at (-5.7,  0.0) {Sparse frames};
-      \node[box] (model)  at (-5.7, -4.2) {VGGT \,+\, MASt3R};
-      \node[io]  (map)    at ( 5.7, -2.1) {World map};
-      \node[box,fill=BlueTint,draw=ETHBlue,line width=1.4pt] (ba) at (0.0,-8.8) {Bundle Adjustment};
-      \node[box] (poses)  at ( 0.0,-13.0) {Camera poses};
+      \node[box] (model)  at (-5.7, -3.2) {VGGT \,+\, MASt3R};
+      \node[io]  (map)    at ( 5.7, -1.6) {World map};
+      \node[box,fill=BlueTint,draw=ETHBlue,line width=1.4pt] (ba) at (0.0,-6.6) {Bundle Adjustment};
+      \node[box] (poses)  at ( 0.0,-9.8) {Camera poses};
       \draw[arr] (frames) -- (model);
       \draw[arr] (model)  -- node[lbl,pos=0.5,left=0.5mm] {Pose estimates\\+ correspondences} (ba);
       \draw[arr] (map)    -- node[lbl,pos=0.5,right=0.5mm] {super-quadric\\loss} (ba);
       \draw[arr] (ba)     -- (poses);
     \end{tikzpicture}
-    \vskip0.5cm
+    \vskip0.2cm
   \end{psection}
 
   \flexgap
 
   \begin{psection}{The Environment Prior}
     \begin{minipage}[c]{0.56\linewidth}
-      SuperDec [4] fits a compact set of \textbf{super-quadrics} to the scene point
-      cloud. During BA, each triangulated point is associated to its nearest
-      primitive and pulled onto that surface by a one-sided point-to-quadric term,
-      re-associated EM-style every few iterations.
+      SuperDec [4] fits a compact set of \textbf{super-quadrics} to the scene
+      point cloud. During BA, each triangulated point is pulled onto its nearest
+      primitive by a one-sided point-to-quadric term, re-associated EM-style
+      every few iterations:
     \end{minipage}\hfill
     \begin{minipage}[c]{0.40\linewidth}
       \centering
@@ -178,6 +190,15 @@
     \end{minipage}
     \vskip0.4ex
     \cpt{Figure 1: Super-quadric decomposition of a scene (189 primitives) with camera poses.}
+    \vskip0.6ex
+    {\large
+    \[
+      E=\underbrace{\sum_{i,j}\rho\!\left(\lVert \pi(R_i,t_i,X_j)-x_{ij}\rVert^2\right)}_{\text{reprojection}}
+       +\underbrace{\sum_{j}\Big(\lambda\,\lVert q_j\rVert\cdot\max\!\big(0,\,1-F(q_j)^{-\varepsilon_1}\big)\Big)^2}_{\text{one-sided surface prior}}
+    \]}
+    \vskip-0.2ex
+    {\small where $F(\cdot)$ is the inside--outside function of the super-quadric
+    nearest to point $X_j$ and $\lambda$ the prior weight [5].}
   \end{psection}
 
   \flexgap
@@ -188,35 +209,49 @@
       \item \textbf{Models:} VGGT for feed-forward poses (via MapAnything [2]),
             MASt3R for matching [3]; SuperDec [4] for the prior
       \item \textbf{Optimization:} full triangulation + surface BA in Ceres
+      \item \textbf{Metric:} pose AUC@5$^\circ$ (higher is better)
     \end{itemize}
-    \vskip0.4ex
-    {\large
-    \[
-      E=\underbrace{\sum_{i,j}\rho\!\left(\lVert \pi(R_i,t_i,X_j)-x_{ij}\rVert^2\right)}_{\text{reprojection}}
-       +\underbrace{\sum_{j}\Big(\lambda\,\lVert q_j\rVert\cdot\max\!\big(0,\,1-F(q_j)^{-\varepsilon_1}\big)\Big)^2}_{\text{one-sided surface prior}}
-    \]}
-    \vskip-0.2ex
-    {\small where $F(\cdot)$ is the inside--outside function of the super-quadric
-    $a(j)$ nearest to point $X_j$, $\varepsilon_1$ its shape parameter, and
-    $\lambda$ the prior weight [5]. \textbf{Metric:} pose AUC@5$^\circ$.}
   \end{psection}
+
+  \flexgap
+
+  \begin{block}{References \& Code}
+    \begin{minipage}[c]{0.80\linewidth}
+    {\footnotesize\setlength{\parindent}{0pt}\setlength{\emergencystretch}{8em}\raggedright\sloppy
+    \hyphenation{Map-Any-thing Feed-For-ward Re-con-struc-tion}
+    \noindent [1] Wang et al., \emph{VGGT: Visual Geometry Grounded Transformer}. CVPR 2025.\par
+    \noindent [2] Keetha et al., \emph{MapAnything: Universal Feed-Forward Metric 3D Reconstruction}. 3DV 2026.\par
+    \noindent [3] Leroy et al., \emph{Grounding Image Matching in 3D with MASt3R}. ECCV 2024.\par
+    \noindent [4] Fedele et al., \emph{SuperDec: 3D Scene Decomposition with Superquadric Primitives}. ICCV 2025.\par
+    \noindent [5] Mueller et al., \emph{Reconstructing People, Places, and Cameras}. CVPR 2025.\par}
+    \end{minipage}\hfill
+    \begin{minipage}[c]{0.18\linewidth}
+      \centering
+      \qrcode[height=2.6cm]{\posterurl}\\[2mm]
+      \cpt{Code \& report}
+    \end{minipage}
+  \end{block}
 
 \end{column}
 %---------------------------------------------------------------- RIGHT COLUMN
 \begin{column}{\colwidth}
 
   \begin{psection}{Results}
-    Three configurations: \textbf{VGGT-only} (feed-forward poses, AUC@5
-    $=9.3$), \textbf{Baseline} (reprojection BA), and \textbf{Ours} (BA + the
-    super-quadric prior). \textbf{The prior's benefit grows as the input gets
-    sparser} --- the realistic relocalization regime.
-    \vskip1.2ex
+    Three configurations: \textbf{VGGT-only} (raw feed-forward poses),
+    \textbf{Baseline} (reprojection BA), and \textbf{Ours} (BA + the
+    super-quadric prior).
+    \vskip0.8ex
+    % ---- qualitative before/after (the pipeline corrects raw poses) ----
+    \includegraphics[width=\linewidth]{figures/before_after_poses.png}
+    \cpt{Figure 2: Our pipeline vs.\ raw VGGT on a scene --- mean camera-rotation
+      error drops $35^\circ\!\to\!17^\circ$ (estimated cameras snap onto ground truth).}
+    \vskip1.0ex
     % ---- hero chart: full width grouped bars ----
     \begin{center}
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.9\linewidth, height=13cm,
+        \begin{axis}[posterchart, width=0.92\linewidth, height=11.5cm,
           ybar, bar width=1.7cm, enlarge x limits=0.32,
-          title={Pose AUC@5 vs.\ number of input views},
+          title={The prior's gain grows as views get sparser},
           symbolic x coords={4,6,8}, xtick=data,
           xlabel={Number of input views}, ylabel={AUC@5 ($\%$)},
           ymin=0, ymax=48,
@@ -230,27 +265,10 @@
         \end{axis}
       \end{tikzpicture}
     \end{center}
-    \vskip1.0ex
-    % ---- gain chart + results table side by side ----
-    \begin{minipage}[c]{0.52\colwidth}
-      \centering
-      \begin{tikzpicture}
-        \begin{axis}[posterchart, height=9.5cm,
-          ybar, bar width=1.2cm, enlarge x limits=0.2,
-          title={Gain from the prior ($\Delta$AUC@5)},
-          symbolic x coords={4,6,8,10}, xtick=data,
-          xlabel={Number of input views}, ylabel={$\Delta$ AUC@5 (pp)},
-          ymin=0, ymax=1.9,
-          nodes near coords={\textbf{+\pgfmathprintnumber{\pgfplotspointmeta}}},
-          every node near coord/.append style={font=\normalsize,color=ETHBlueDark,/pgf/number format/.cd,fixed,precision=1},
-        ]
-          \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,1.3)(6,1.5)(8,0.1)(10,0.2)};
-        \end{axis}
-      \end{tikzpicture}
-    \end{minipage}\hfill
-    \begin{minipage}[c]{0.44\colwidth}
-      \centering
-      \renewcommand{\arraystretch}{1.35}
+    \vskip0.6ex
+    % ---- results table (the exact numbers / talking ammo) ----
+    \begin{center}
+      \renewcommand{\arraystretch}{1.3}
       {\normalsize
       \begin{tabular}{lcccc}
         \toprule
@@ -264,46 +282,22 @@
         \midrule
         $\Delta$ & \textcolor{ETHBlue}{\textbf{+1.3}} & \textcolor{ETHBlue}{\textbf{+1.5}} & +0.1 & +0.2\\
         \bottomrule
-      \end{tabular}}\\[0.6ex]
+      \end{tabular}}\\[0.5ex]
       \cpt{Up to $+2.0$ at 4 views with light $\lambda$ tuning.}
-    \end{minipage}
-    \vskip1.0ex
-    \begin{beamercolorbox}[wd=\linewidth,sep=0.5cm,rounded=true,center]{block title}
-      \large\bfseries\color{ETHBlueDark}
-      +1.5 AUC@5 at 6 views ($\approx$5\% relative) vs.\ +0.2 at 10 views
-    \end{beamercolorbox}
-  \end{psection}
-
-  \flexgap
-
-  \begin{psection}{Discussion}
-    At high view counts, dense multi-view correspondences already constrain the
-    poses, so the prior is largely redundant ($+0.2$ at 10 views). As views drop
-    and co-visibility collapses, reprojection alone under-constrains the geometry
-    --- and the super-quadric surface fills exactly that gap, recovering up to
-    $+2.0$ AUC@5 with light tuning at 4 views. ATE stays comparable throughout.
+    \end{center}
   \end{psection}
 
   \flexgap
 
   \begin{psection}{Conclusion}
-    Transformer-based SfM cannot natively exploit an environment prior; we close
-    this gap for relocalization. Encoding the prior as a super-quadric cloud and
-    adding a point-to-quadric term to BA improves pose accuracy over both
-    VGGT-only and standard BA --- most where it matters: \textbf{sparse,
-    low-covisibility views}.
+    At high view counts dense correspondences already constrain the poses, so the
+    prior is largely redundant ($+0.2$ at 10 views). As views drop and
+    co-visibility collapses, reprojection alone under-constrains the geometry ---
+    and the super-quadric surface fills exactly that gap, recovering up to
+    $+2.0$ AUC@5 at 4 views. \textbf{Encoding an environment prior as a
+    super-quadric cloud helps relocalization most where it matters: sparse,
+    low-covisibility views.}
   \end{psection}
-
-  \flexgap
-
-  \begin{block}{References}
-    {\small\setlength{\parindent}{0pt}\setlength{\emergencystretch}{3em}\raggedright\sloppy
-    \noindent [1] Wang et al., \emph{VGGT: Visual Geometry Grounded Transformer}. CVPR 2025.\par
-    \noindent [2] Keetha et al., \emph{MapAnything: Universal Feed-Forward Metric 3D Reconstruction}. 3DV 2026.\par
-    \noindent [3] Leroy et al., \emph{Grounding Image Matching in 3D with MASt3R}. ECCV 2024.\par
-    \noindent [4] Fedele et al., \emph{SuperDec: 3D Scene Decomposition with Superquadric Primitives}. ICCV 2025.\par
-    \noindent [5] Mueller et al., \emph{Reconstructing People, Places, and Cameras}. CVPR 2025.\par}
-  \end{block}
 
 \end{column}
 \end{columns}
