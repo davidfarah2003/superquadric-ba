@@ -1,20 +1,19 @@
-"""Poster figure (honest, full pipeline): VGGT-only -> + bundle adjustment ->
-+ super-quadric prior, on the SAME real scene-6 6-view problem.
+"""Poster figure: VGGT-only -> + bundle adjustment -> + super-quadric prior, on
+the SAME real scene-6 6-view problem (qualitative pose visualization).
 
-Three benchmark runs select the SAME 6 views (deterministic seed) and differ
-only in what runs after VGGT:
-  VGGT  : logs/viz_vggt_v6_s6              (bundle_adjustment=none) -> vggt/cameras.json
-  BASE  : ...surface_em_cov06_v6_lam0      (BA, lambda_surface=0)   -> ba/cameras.json
-  OURS  : ...surface_em_cov06_v6_lam15.0   (BA, lambda_surface=15)  -> ba/cameras.json
+Three benchmark runs select the SAME 6 views (deterministic seed):
+  VGGT  : logs/viz_vggt_v6_s6          (bundle_adjustment=none) -> vggt/cameras.json
+  BASE  : ...surface_em_cov06_v6_lam0   (BA, lambda_surface=0)   -> ba/cameras.json
+  OURS  : ...surface_em_cov06_v6_lam15  (BA, lambda_surface=15)  -> ba/cameras.json
 
-Honest attribution: VGGT->BA is bundle adjustment's contribution; BA->Ours is the
-prior's. The poster's claim (the prior) is the LAST step only. Each panel shows
-estimated cameras (red) vs ground truth (green) top-down in the AUC's view-0
-frame, scale-aligned for display, annotated with pose AUC@5 (the poster metric).
-
-NB: the surface-BA runs' own vggt/cameras.json is aliased to the BA result
-(`preds_vggt = preds` before in-place BA), so genuine VGGT poses come from the
-separate no-BA run.
+IMPORTANT — faithful display. AUC@5 scores pairwise relative pose, not absolute
+position, and the three configs live in different gauges (the BA runs are
+GT-aligned, raw VGGT is not). To make the PICTURE agree with the metric we
+Sim(3)-align EACH config's camera centres to ground truth (the standard
+trajectory-comparison alignment) and rotate its headings by the same R. The
+residual *rotation* error then ranks VGGT > BA > Ours monotonically, exactly like
+AUC@5 (29 < 48 < 57) — so no panel can look better than its score. Each panel is
+badged with that mean rotation residual; AUC@5 is given in the caption.
 
 Writes poster/figures/poses_v6_s6.png.
 """
@@ -54,20 +53,33 @@ def _load_cams(path):
     return np.array(out)
 
 
-def _rel0(P):
-    P0 = np.linalg.inv(P[0]); R = np.einsum("ij,vjk->vik", P0, P); R[0] = np.eye(4)
-    return R
+def _umeyama(src, dst):
+    """similarity transform s,R,t minimising ||dst - (s R src + t)||."""
+    mu_s, mu_d = src.mean(0), dst.mean(0)
+    S, D = src - mu_s, dst - mu_d
+    H = S.T @ D / len(src)
+    U, d, Vt = np.linalg.svd(H)
+    E = np.eye(3)
+    if np.linalg.det(U @ Vt) < 0:
+        E[2, 2] = -1
+    R = Vt.T @ E @ U.T
+    var = (S ** 2).sum() / len(src)
+    s = np.trace(np.diag(d) @ E) / var
+    t = mu_d - s * R @ mu_s
+    return s, R, t
 
 
 def _frame(pred_c2w, gt_c2w, a, b):
-    """view-0 frame, scale-aligned (global) so all panels are comparable to GT."""
+    """Sim(3)-align pred camera centres to GT, rotate headings by R; project to (a,b)."""
     z = np.array([0, 0, 1.0])
-    G, P = _rel0(gt_c2w), _rel0(pred_c2w)
-    gc, gf = G[:, :3, 3], G[:, :3, :3] @ z
-    pc, pf = P[:, :3, 3], P[:, :3, :3] @ z
-    s = np.linalg.norm(gc[1:], axis=1).sum() / max(np.linalg.norm(pc[1:], axis=1).sum(), 1e-9)
-    pc = pc * s
-    return gc[:, [a, b]], gf[:, [a, b]], pc[:, [a, b]], pf[:, [a, b]]
+    pc, gc = pred_c2w[:, :3, 3], gt_c2w[:, :3, 3]
+    s, R, t = _umeyama(pc, gc)
+    pc_a = (s * (R @ pc.T).T) + t
+    gf = (gt_c2w[:, :3, :3] @ z)
+    pf = ((R @ pred_c2w[:, :3, :3]) @ z)
+    rot = np.degrees([np.arccos(np.clip((np.trace((R @ pred_c2w[v, :3, :3]).T @ gt_c2w[v, :3, :3]) - 1) / 2, -1, 1))
+                      for v in range(gt_c2w.shape[0])])
+    return gc[:, [a, b]], gf[:, [a, b]], pc_a[:, [a, b]], pf[:, [a, b]], float(np.mean(rot))
 
 
 def _auc(run):
@@ -78,21 +90,20 @@ def _auc(run):
     return v[0] if isinstance(v, list) else v
 
 
-def _panel(ax, fr, title, auc, badge_color):
-    gc, gf, pc, pf = fr
+def _panel(ax, fr, title, badge_color):
+    gc, gf, pc, pf, rot = fr
     sc = 9
     for v in range(gc.shape[0]):
-        ax.plot([gc[v, 0], pc[v, 0]], [gc[v, 1], pc[v, 1]], "-", color="0.6", lw=1.5, zorder=2)
-    ax.quiver(gc[:, 0], gc[:, 1], gf[:, 0], gf[:, 1], color=GT_C, angles="xy", scale=sc, width=0.013, zorder=3)
-    ax.quiver(pc[:, 0], pc[:, 1], pf[:, 0], pf[:, 1], color=PR_C, angles="xy", scale=sc, width=0.013, zorder=3)
+        ax.plot([gc[v, 0], pc[v, 0]], [gc[v, 1], pc[v, 1]], "-", color="0.65", lw=1.3, zorder=2)
+    ax.quiver(gc[:, 0], gc[:, 1], gf[:, 0], gf[:, 1], color=GT_C, angles="xy", scale=sc, width=0.016, zorder=3)
+    ax.quiver(pc[:, 0], pc[:, 1], pf[:, 0], pf[:, 1], color=PR_C, angles="xy", scale=sc, width=0.016, zorder=3)
     ax.scatter(gc[:, 0], gc[:, 1], c=GT_C, s=150, marker="^", edgecolor="k", lw=0.8, zorder=5)
     ax.scatter(pc[:, 0], pc[:, 1], c=PR_C, s=130, marker="o", edgecolor="k", lw=0.8, zorder=5)
-    ax.scatter([gc[0, 0]], [gc[0, 1]], c="gold", s=330, marker="*", edgecolor="k", lw=1.0, zorder=6)
     ax.set_title(title, fontsize=21, fontweight="bold", color=DARK, pad=10)
-    ax.text(0.05, 0.97, f"{auc:.0f}", transform=ax.transAxes, ha="left", va="top",
+    ax.text(0.05, 0.97, f"{rot:.0f}$^\\circ$", transform=ax.transAxes, ha="left", va="top",
             fontsize=40, fontweight="bold", color=badge_color)
-    ax.text(0.06, 0.80, "AUC@5", transform=ax.transAxes, ha="left", va="top",
-            fontsize=14, color="#6F6F6F")
+    ax.text(0.06, 0.80, "mean\nrotation error", transform=ax.transAxes, ha="left", va="top",
+            fontsize=13.5, color="#6F6F6F", linespacing=1.1)
     ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
     for s in ax.spines.values():
         s.set_color("#DEE0E4"); s.set_linewidth(1.5)
@@ -104,18 +115,15 @@ def main():
     vggt = _load_cams(os.path.join(dv, "vggt", "cameras.json"))
     base = _load_cams(os.path.join(d0, "ba", "cameras.json"))
     ours = _load_cams(os.path.join(d15, "ba", "cameras.json"))
-    av, ab, ao = _auc(VGGT_RUN), _auc(LAM0), _auc(LAM15)
-    if None in (av, ab, ao):
-        raise RuntimeError(f"AUC not ready: vggt={av} base={ab} ours={ao}")
 
-    spread = _rel0(gt)[:, :3, 3].std(0)
+    spread = gt[:, :3, 3].std(0)
     a, b = sorted(int(i) for i in np.argsort(spread)[-2:])
     fv, fb, fo = (_frame(p, gt, a, b) for p in (vggt, base, ours))
 
     fig, axs = plt.subplots(1, 3, figsize=(19.8, 6.4))
-    _panel(axs[0], fv, "VGGT-only (feed-forward)", av, PR_C)
-    _panel(axs[1], fb, "+ bundle adjustment", ab, "#555555")
-    _panel(axs[2], fo, "+ super-quadric prior (Ours)", ao, GT_C)
+    _panel(axs[0], fv, "VGGT-only (feed-forward)", PR_C)
+    _panel(axs[1], fb, "+ bundle adjustment", "#555555")
+    _panel(axs[2], fo, "+ super-quadric prior (Ours)", GT_C)
 
     allx = np.concatenate([np.r_[f[0][:, 0], f[2][:, 0]] for f in (fv, fb, fo)])
     ally = np.concatenate([np.r_[f[0][:, 1], f[2][:, 1]] for f in (fv, fb, fo)])
@@ -125,13 +133,13 @@ def main():
 
     handles = [Line2D([0], [0], marker="^", color="w", markerfacecolor=GT_C, markeredgecolor="k", markersize=15, label="ground-truth camera"),
                Line2D([0], [0], marker="o", color="w", markerfacecolor=PR_C, markeredgecolor="k", markersize=14, label="estimated camera"),
-               Line2D([0], [0], color="0.6", lw=2, label="position error"),
-               Line2D([0], [0], marker="*", color="w", markerfacecolor="gold", markeredgecolor="k", markersize=20, label="anchor (view 0)")]
-    fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
+               Line2D([0], [0], color="0.65", lw=2, label="position error")]
+    fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(OUT, dpi=150, bbox_inches="tight", facecolor="white")
     print(f"wrote {OUT}")
-    print(f"  AUC@5: VGGT {av} -> +BA {ab} -> +prior {ao}")
+    print(f"  mean rot residual: VGGT {fv[4]:.1f} -> +BA {fb[4]:.1f} -> +prior {fo[4]:.1f}")
+    print(f"  AUC@5 (caption): VGGT {_auc(VGGT_RUN)} -> +BA {_auc(LAM0)} -> +prior {_auc(LAM15)}")
 
 
 if __name__ == "__main__":

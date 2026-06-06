@@ -110,7 +110,7 @@
     \vskip0.5cm
     {\color{ETHText}\large Lars Hecker\textsuperscript{1}, Raman Besenfelder\textsuperscript{1},
       David Farah\textsuperscript{1}, Fatemeh Sadat Daneshmand\textsuperscript{2},
-      Elisabetta Fedele\textsuperscript{1}, Linfei\textsuperscript{1}\par}
+      Elisabetta Fedele\textsuperscript{1}, Pan Linfei\textsuperscript{1}\par}
     \vskip0.22cm
     {\color{ETHGrey}\large \textsuperscript{1}ETH Zurich \quad \textsuperscript{2}ZHAW\par}
   \end{beamercolorbox}
@@ -129,10 +129,11 @@
   \begin{tikzpicture}
     \node[rounded corners=10pt,fill=ETHBlue,text=white,inner sep=0.7cm,
           text width=\dimexpr\textwidth-1.4cm\relax,align=center] {
-      {\huge\bfseries On top of bundle adjustment, a super-quadric environment prior
-       improves camera-pose accuracy most where views are sparse and barely overlap.}\\[4mm]
-      {\LARGE \textbf{+1.5} AUC@5 at 6 views \;(up to \textbf{+2.0} at 4)
-       \;---\; but only +0.2 once 10 views already pin the geometry}
+      {\huge\bfseries A super-quadric environment prior, added on top of bundle
+       adjustment, improves camera-pose accuracy. The gain is largest when views
+       are sparse and barely overlap.}\\[4mm]
+      {\LARGE \textbf{+1.5} AUC@5 at 6 views (up to \textbf{+2.0} at 4).
+       Only +0.2 once 10 views already pin the geometry.}
     };
   \end{tikzpicture}
 \end{beamercolorbox}\par}
@@ -144,11 +145,11 @@
 \begin{column}{\colwidth}
 
   \begin{psection}{The Problem}
-    In relocalization (the ``kidnapped robot''), camera pose must be recovered
-    accurately \emph{given} a known environment. Transformer-based SfM (e.g.\
-    VGGT [1]) gives fast, strong feed-forward poses but \textbf{cannot exploit
-    such a prior} --- and it degrades when views are few and barely overlap.
-    We bridge this gap with a \textbf{super-quadric} scene prior [4].
+    Relocalization (the ``kidnapped robot'') asks for an accurate camera pose in
+    a \emph{known} environment. Transformer-based SfM such as VGGT [1] returns
+    fast feed-forward poses, but \textbf{cannot use such a prior}, and degrades
+    when views are few and barely overlap. We add a \textbf{super-quadric} scene
+    prior [4].
   \end{psection}
 
   \flexgap
@@ -180,15 +181,15 @@
   \begin{psection}{The Environment Prior}
     \centering
     \includegraphics[width=\linewidth]{figures/superquadric_family.png}\\[-0.2ex]
-    \cpt{A super-quadric is a single shape family: two exponents set its roundness,
-      three half-extents set its size, and a pose places it --- so a handful tile a room.}
+    \cpt{A super-quadric is one shape family. Two exponents set its roundness,
+      three half-extents set its size, and a pose places it, so a handful tile a room.}
     \vskip0.7ex
     \raggedright
     \begin{minipage}[c]{0.55\linewidth}
       SuperDec [4] fits a compact set of \textbf{super-quadrics} to the scene
-      point cloud (right). During BA, each triangulated point is pulled onto its
-      nearest primitive by a one-sided point-to-quadric term, re-associated
-      EM-style every few iterations:
+      point cloud (right). During BA, a one-sided point-to-quadric term pulls
+      each triangulated point toward its nearest primitive, with EM-style
+      re-association every few iterations:
     \end{minipage}\hfill
     \begin{minipage}[c]{0.41\linewidth}
       \centering
@@ -202,7 +203,7 @@
        +\underbrace{\sum_{j}\Big(\lambda\,\lVert q_j\rVert\cdot\max\!\big(0,\,1-F(q_j)^{-\varepsilon_1}\big)\Big)^2}_{\text{one-sided surface prior}}
     \]}
     \vskip-0.2ex
-    {\small where $F(\cdot)$ is the inside--outside function of the super-quadric
+    {\small where $F(\cdot)$ is the inside-outside function of the super-quadric
     nearest to point $X_j$ and $\lambda$ the prior weight [5].}
   \end{psection}
 
@@ -243,69 +244,72 @@
 
   \begin{psection}{Results}
     Three stages: raw VGGT poses, \textbf{bundle adjustment}, then BA $+$
-    \textbf{our super-quadric prior}. BA does the heavy lifting (raw VGGT averages
-    only $9.3$ AUC@5 at 10 views, $20.4$ at 6); the prior then adds a consistent
-    gain \emph{on top of BA} that grows as views get sparser.
+    \textbf{our super-quadric prior}. BA does most of the work (raw VGGT averages
+    only $9.3$ AUC@5 at 10 views, $20.4$ at 6). The prior then adds a gain
+    \emph{on top of BA} that grows as views get sparser.
     \vskip0.8ex
-    % ---- 3-panel pipeline: VGGT -> +BA -> +prior, real scene-6 6-view poses from
-    %      cluster jobs 97015 (vggt/no-BA), 96890 (lam0), 96891 (lam15). ----
+    % ---- qualitative 3-panel pipeline (Sim(3)-aligned, rotation-error badges) ----
     \includegraphics[width=\linewidth]{figures/poses_v6_s6.png}
-    \cpt{Figure 2: the pipeline on one scene (scene 6, 6 views) --- the \emph{same}
-      6 views at each stage. Bundle adjustment corrects raw VGGT; the super-quadric
-      prior then pulls the remaining cameras onto ground truth (grey $=$ position
-      error). Pose AUC@5: $29 \to 48 \to \mathbf{57}$.}
-    \vskip0.4ex
-    % ---- hero chart: full width grouped bars with raw-VGGT reference ----
+    \cpt{Figure 2: one scene (scene 6, 6 views), cameras Sim(3)-aligned to ground
+      truth for display. Estimated headings (red) move toward ground truth (green) as
+      bundle adjustment, then the prior, are added. Mean rotation error
+      $20^\circ\!\to\!10^\circ\!\to\!2^\circ$ (pose AUC@5 $29\to48\to\mathbf{57}$).}
+    \vskip0.9ex
+    % ---- two bar charts side by side: absolute AUC (left) | gain from prior (right) ----
     \begin{center}
+    \begin{minipage}[t]{0.5\linewidth}
+      \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.92\linewidth, height=10cm,
-          ybar, bar width=1.7cm, enlarge x limits=0.32,
-          title={The prior's gain over BA grows as views get sparser},
+        \begin{axis}[posterchart, width=0.92\linewidth, height=9cm,
+          ybar, bar width=0.44cm, enlarge x limits=0.32,
+          title={Pose AUC@5 by view count},
+          title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
           symbolic x coords={4,6,8}, xtick=data,
           xlabel={Number of input views}, ylabel={AUC@5 ($\%$)},
-          ymin=0, ymax=48,
-          nodes near coords, every node near coord/.append style={font=\normalsize,/pgf/number format/.cd,fixed,fixed zerofill,precision=1},
-          legend style={font=\normalsize,at={(0.985,0.985)},anchor=north east,draw=CardEdge,fill=white,fill opacity=0.9,text opacity=1},
+          ymin=0, ymax=46,
+          legend style={font=\scriptsize,at={(0.985,0.985)},anchor=north east,draw=CardEdge,fill=white,fill opacity=0.92,text opacity=1},
           legend cell align=left,
         ]
+          \addplot[fill=BarLite,draw=BarLite!65!black] coordinates {(4,27.7)(6,20.4)(8,13.4)};
           \addplot[fill=BarGray,draw=BarGray!70!black] coordinates {(4,39.3)(6,29.6)(8,27.9)};
           \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,40.7)(6,31.1)(8,28.0)};
-          \legend{Baseline (reproj.\ BA),Ours (+ prior)}
+          \legend{VGGT-only,Baseline (BA),Ours (+ prior)}
         \end{axis}
       \end{tikzpicture}
-    \end{center}
-    \vskip0.6ex
-    % ---- results table (the exact numbers / talking ammo) ----
-    \begin{center}
-      \renewcommand{\arraystretch}{1.3}
-      {\normalsize
-      \begin{tabular}{lcccc}
-        \toprule
-        AUC@5 (\%) & \multicolumn{4}{c}{\# input views}\\
-        \cmidrule(l){2-5}
-                 & 4 & 6 & 8 & 10\\
-        \midrule
-        Baseline & 39.3 & 29.6 & 27.9 & 29.4\\
-        \rowcolor{BlueTint}\textbf{Ours} & \textbf{40.7} & \textbf{31.1} & \textbf{28.0} & \textbf{29.6}\\
-        \midrule
-        $\Delta$ & \textcolor{ETHBlue}{\textbf{+1.3}} & \textcolor{ETHBlue}{\textbf{+1.5}} & +0.1 & +0.2\\
-        \bottomrule
-      \end{tabular}}\\[0.5ex]
-      \cpt{Up to $+2.0$ at 4 views with light $\lambda$ tuning. At 6 views the prior
-        helps 3/10 scenes (up to $+9.3$) and hurts none.}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.47\linewidth}
+      \centering
+      \begin{tikzpicture}
+        \begin{axis}[posterchart, width=0.88\linewidth, height=9cm,
+          ybar, bar width=0.76cm, enlarge x limits=0.18,
+          title={Gain from the prior ($\Delta$AUC@5)},
+          title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
+          symbolic x coords={4,6,8,10}, xtick=data,
+          xlabel={Number of input views}, ylabel={$\Delta$ AUC@5 (pp)},
+          ymin=0, ymax=1.85, clip=false,
+          nodes near coords={\textbf{+\pgfmathprintnumber{\pgfplotspointmeta}}},
+          every node near coord/.append style={font=\small,color=ETHBlueDark,/pgf/number format/.cd,fixed,precision=1},
+        ]
+          \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,1.3)(6,1.5)(8,0.1)(10,0.2)};
+        \end{axis}
+      \end{tikzpicture}
+    \end{minipage}\\[0.4ex]
+    \cpt{Left: bundle adjustment (grey) lifts raw VGGT (light), and our prior
+      (blue) adds more as views get sparser. Right: the prior's gain grows from
+      $+0.2$ at 10 views to $+1.5$ at 6 and $+1.3$ at 4 (up to $+2.0$ with light
+      $\lambda$ tuning); at 6 views it helps 3/10 scenes (up to $+9.3$) and hurts none.}
     \end{center}
   \end{psection}
 
   \flexgap
 
   \begin{psection}{Conclusion}
-    At high view counts dense correspondences already constrain the poses, so the
-    prior is largely redundant ($+0.2$ at 10 views). As views drop and
-    co-visibility collapses, reprojection alone under-constrains the geometry ---
-    and the super-quadric surface fills exactly that gap, recovering up to
-    $+2.0$ AUC@5 at 4 views. \textbf{Encoding an environment prior as a
-    super-quadric cloud helps relocalization most where it matters: sparse,
-    low-covisibility views.}
+    At high view counts, dense correspondences already constrain the poses, so the
+    prior adds little ($+0.2$ at 10 views). As views drop and co-visibility
+    collapses, reprojection alone under-constrains the geometry. The super-quadric
+    surface supplies the missing constraint, recovering up to $+2.0$ AUC@5 at 4
+    views. \textbf{An environment prior encoded as a super-quadric cloud helps
+    relocalization most under sparse, low-covisibility views.}
   \end{psection}
 
 \end{column}

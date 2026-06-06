@@ -9,8 +9,10 @@ and two bottom-aligned columns.
 Layout follows a "Better Poster" hybrid (scan-first, evidence-based): a
 **full-width plain-language takeaway band** sits directly under the title as the
 focal point, methods are visually demoted, and the **Results** card dominates
-(honest Baseline-vs-Ours pose figure + grouped-bar chart + numbers table). A **QR
-code** in the References card links to the code/report.
+(a qualitative VGGT→BA→prior pose figure + two side-by-side bar charts: a
+3-series **VGGT / Baseline / Ours** absolute-AUC@5 chart and a single-series
+**gain-from-the-prior** ΔAUC@5 chart). A **QR code** in the References card links
+to the code/report.
 
 The poster leads with the project's headline finding: the super-quadric
 environment prior **helps most when the input is sparse** — the realistic
@@ -20,13 +22,24 @@ relocalization regime (gain grows from +0.2 AUC@5 at 10 views to +1.5 at 6 and
 **Scientific honesty (important).** Bundle adjustment, not the prior, does most
 of the work of fixing raw VGGT poses (at 10 views ≈88% of the rotation-error
 reduction is plain BA, only ≈12% the prior). The poster therefore credits the
-prior only with its *marginal gain on top of BA*: the takeaway band, the
-grouped-bar (with a "raw VGGT = 9.3, no BA" reference line) and the pose figure
-all compare **Baseline (BA, no prior) vs Ours (BA + prior)** — never VGGT-vs-Ours,
-which would let BA's win masquerade as the prior's. Figure 2 is the real
-benchmark scene-6 / 6-view problem run twice (λ=0 vs λ=15) on the **same** views;
-the prior's +9.3 AUC@5 there is a genuine, positional improvement (camera centres
-move onto ground truth; rotation is unchanged).
+prior only with its *marginal gain on top of BA*, shown via **Baseline (BA, no
+prior) vs Ours (BA + prior)** — never VGGT-vs-Ours, which would let BA's win
+masquerade as the prior's.
+
+The Results bar charts are driven directly by the benchmark's own
+dataset-average `pose_auc_5` numbers (VGGT / Baseline / Ours at 4/6/8/10 views),
+so that part of the figure **is** the metric. (An earlier numbers table was
+dropped as redundant with the two charts.)
+
+The qualitative 3-panel pose figure (Fig 2, `poses_v6_s6.png`) needs care:
+AUC@5 scores *pairwise relative rotation + translation-angle*, not absolute
+camera position, and the three configs live in different gauges — so a naive
+position scatter can show a worse config looking better (an earlier version did
+exactly this for VGGT-vs-BA). The current figure **Sim(3)-aligns each config's
+cameras to ground truth** (standard trajectory-comparison alignment) and badges
+the residual *rotation* error, which ranks VGGT (20°) > BA (10°) > Ours (2°)
+monotonically — matching AUC@5 (29 < 48 < 57). It is a qualitative illustration;
+the bar chart/table carry the exact metric.
 
 There is **no official LaTeX version** of the ETH poster template — ETH only
 ships PowerPoint + Illustrator. This is a `beamerposter` layout in ETH colours,
@@ -74,15 +87,16 @@ The header (title / authors / affiliations / group) is hand-built in the
       **placeholder** (`https://github.com/eth-3dv-team39/...`). Point it at the
       real public repo or report before printing, then recompile (the QR is
       generated at compile time, so no image to regenerate).
-- [ ] **Last author name** — currently `Linfei` (looks truncated in the source
-      poster); fill in the full name.
+- [x] **Last author name** — set to `Pan Linfei`.
 - [ ] Section content lives in the `psection`/`block` environments in the body;
       section numbers are automatic. The takeaway band is the `tikzpicture`
       right after `\begin{frame}`.
 - [ ] Figures (all real outputs): `superquadric_family.png` (the "what is a
       super-quadric" explainer) and `superquadrics_3d_clean.png` (Fig 1, the
-      scene) in the left column; `poses_v6_s6.png` (Fig 2, honest Baseline-vs-Ours
-      pose comparison) in Results. See the provenance table below.
+      scene) in the left column. Results uses two side-by-side `pgfplots` bar
+      charts (drawn inline, not images): a 3-series VGGT/Baseline/Ours absolute
+      AUC@5 chart and a single-series ΔAUC@5 "gain from the prior" chart. See
+      the provenance table below.
 - [ ] Layout knobs: `\margin` / `\gutter` (even frame + column gap), the
       takeaway-band font sizes (`\huge`/`\LARGE`), and `scale=` in the
       `\usepackage[...]{beamerposter}` line (scales all text).
@@ -96,8 +110,8 @@ All figures and numbers are this project's real outputs.
 |-------------|--------|--------------|
 | `superquadric_family.png` (explainer, **used**) | written directly into `figures/` | `ba/eval/fig_superquadric_family.py` (pure-geometry shape-family morph; no data) |
 | `superquadrics_3d_clean.png` (Fig 1, **used**) | `ba/eval/analysis/fig9_sq3d_scene6.png` | `ba/eval/show_scene.py` (`fig_sq3d()`) |
-| `poses_v6_s6.png` (Fig 2, **used**) | benchmark viz dumps (see below) | `ba/eval/fig_poses_v6_s6.py` (3-panel VGGT→+BA→+prior, scene-6 6-view, AUC@5 29→48→57) |
-| `before_after_poses.png` (**superseded**, unused) | — | `ba/eval/fig_before_after.py` — the old VGGT-vs-Ours figure; dropped as misleading (credited the prior for BA's work) |
+| `poses_v6_s6.png` (Fig 2, **used**) | benchmark viz dumps (see below) | `ba/eval/fig_poses_v6_s6.py` — Sim(3)-aligned 3-panel VGGT→+BA→+prior, scene-6 6-view, mean rotation error 20°→10°→2° |
+| `before_after_poses.png` (**superseded**, unused) | — | `ba/eval/fig_before_after.py` — the older VGGT-vs-Ours figure; dropped as misleading (credited the prior for BA's work) |
 | `input_views.png` (unused)      | `ba/eval/analysis/fig8_views_scene6.png` | `ba/eval/show_scene.py` (`fig_views()`) |
 | `recon_poses_clean.png` (unused) | `ba/eval/analysis/fig4_recon_scene6.png` | `ba/eval/analyze_recon.py` |
 | `auc_decomp.png` (unused) | `ba/eval/analysis/fig1_auc_decomp.png` | `ba/eval/analyze_pose.py` |
@@ -107,43 +121,49 @@ All figures and numbers are this project's real outputs.
 cd ba/eval && ../../envs/3dv/bin/python fig_superquadric_family.py
 ```
 
-**Regenerate Figure 2 (the honest 3-panel pipeline)** — needs three GPU benchmark
-runs that dump scene 6's cameras, then the plot script. All three select the
-**same** 6 views (deterministic seed) and differ only in what runs after VGGT:
+**Regenerate Figure 2 (the 3-panel pose figure)** — three GPU runs dump scene 6's
+cameras at the **same** 6 views (deterministic seed), then the plot script
+Sim(3)-aligns each to GT:
 ```bash
-# from repo root, on the cluster (each writes viz/.../sample_6/{gt,vggt,ba}/cameras.json)
-sbatch compose/slurm/run_viz_vggt_v6_s6.sh                                          # VGGT-only (no BA), panel 1
-NUM_VIEWS=6 LAMBDA_SURFACE=0    VIZ_SAVE_INDEX=6 sbatch compose/slurm/run_sparse_surface_em_benchmark.sh  # +BA (Baseline), panel 2
-NUM_VIEWS=6 LAMBDA_SURFACE=15.0 VIZ_SAVE_INDEX=6 sbatch compose/slurm/run_sparse_surface_em_benchmark.sh  # +prior (Ours), panel 3
-# then (reads the three runs' viz + per_scene AUC):
+# from repo root, on the cluster
+sbatch compose/slurm/run_viz_vggt_v6_s6.sh                                          # VGGT-only (no BA)
+NUM_VIEWS=6 LAMBDA_SURFACE=0    VIZ_SAVE_INDEX=6 sbatch compose/slurm/run_sparse_surface_em_benchmark.sh  # +BA (Baseline)
+NUM_VIEWS=6 LAMBDA_SURFACE=15.0 VIZ_SAVE_INDEX=6 sbatch compose/slurm/run_sparse_surface_em_benchmark.sh  # +prior (Ours)
 cd ba/eval && ../../envs/3dv/bin/python fig_poses_v6_s6.py
 ```
 NB: in the *surface-BA* runs the per-run `vggt/cameras.json` is aliased to the BA
 result (`preds_vggt = preds` before in-place BA), so genuine VGGT poses come from
-the separate no-BA run (`run_viz_vggt_v6_s6.sh`, `bundle_adjustment=none`); the
-script reads `ba/cameras.json` from the λ=0 / λ=15 runs as Baseline / Ours.
+the separate no-BA run; the script reads `ba/cameras.json` from the λ=0 / λ=15
+runs as Baseline / Ours. The script reports both the rotation residuals and the
+benchmark AUC@5 (so you can confirm the picture and the metric still agree).
 
-### Headline numbers (Δ chart + results table)
-The `pgfplots` chart and the table are hand-entered from the `pose_auc_5`
-(`Average`) field of these benchmark runs under `logs/`:
+### Headline numbers (Results chart + table)
+The 3-series `pgfplots` chart and the table are the `pose_auc_5` (`Average`)
+field of these benchmark runs under `logs/` (VGGT-only / Baseline λ=0 / Ours
+λ=15):
 
-| Setting | reproj (λ=0) | + surface (λ=15) | Δ | log dirs |
-|---|---|---|---|---|
-| 4 views  | 39.33 | 40.67 | +1.33 | `benchmark_ase_sparse_surface_em_cov06_v4_lam{0,15.0}` (peak 41.33 @ `lamsweep_v4_lam100`) |
-| 6 views  | 29.60 | 31.07 | +1.47 | `sweep_v6_lam{0,15.0}` |
-| 8 views  | 27.93 | 28.00 | +0.07 | `sweep_v8_lam{0,15.0}` |
-| 10 views | 29.42 | 29.60 | +0.18 | `benchmark_ase_sparse_mast3r_cov06`, `benchmark_ase_sparse_surface_em_cov06` |
+| views | VGGT-only | Baseline (λ=0) | Ours (λ=15) | Δ (prior) | log dirs |
+|---|---|---|---|---|---|
+| 4  | 27.67 | 39.33 | 40.67 | +1.33 | VGGT `vggt_v4`; BA `benchmark_ase_sparse_surface_em_cov06_v4_lam{0,15.0}` (peak 41.33 @ `lamsweep_v4_lam100`) |
+| 6  | 20.40 | 29.60 | 31.07 | +1.47 | VGGT `vggt_v6` (or `viz_vggt_v6_s6`); BA `sweep_v6_lam{0,15.0}` |
+| 8  | 13.36 | 27.93 | 28.00 | +0.07 | VGGT `vggt_v8`; BA `sweep_v8_lam{0,15.0}` |
+| 10 |  9.33 | 29.42 | 29.60 | +0.18 | VGGT `benchmark_ase_sparse_vggt_cov06`; BA `benchmark_ase_sparse_surface_em_cov06` |
 
-Raw VGGT (no BA) baseline: 9.33 AUC@5° (`benchmark_ase_sparse_vggt_cov06`).
+VGGT-only rows come from `compose/slurm/run_vggt_nview.sh` (`NV=4/8 sbatch …`,
+`bundle_adjustment=none`); the 6-view value also matches `viz_vggt_v6_s6`.
+The table-caption "+9.3 / hurts none" per-scene facts are from the v6
+`*per_scene_results.json` (scene 6: 48.0→57.3).
 
 To re-extract the numbers:
 ```bash
 python3 - <<'PY'
 import json, os
 root = "/work/courses/3dv/team39/logs"
-for d in ["benchmark_ase_sparse_surface_em_cov06_v4_lam0", "sweep_v6_lam0", ...]:
+for d in ["vggt_v4", "vggt_v6", "vggt_v8",
+          "benchmark_ase_sparse_surface_em_cov06_v4_lam0", "sweep_v6_lam0",
+          "sweep_v6_lam15.0"]:
     avg = json.load(open(os.path.join(root, d, "per_dataset_results.json")))["Average"]
-    print(d, avg["pose_auc_5"])
+    print(d, round(avg["pose_auc_5"], 2))
 PY
 ```
 
