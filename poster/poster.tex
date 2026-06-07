@@ -22,14 +22,12 @@
 \usepackage{colortbl}
 \usepackage{qrcode}
 
-% TODO: point this at the public repo / project report before printing.
-\newcommand{\posterurl}{https://github.com/eth-3dv-team39/relocalization-prior}
+\newcommand{\posterurl}{https://github.com/davidfarah2003/superquadric-ba}
 
 %------------------------------------------------------------------ colours
 \definecolor{ETHBlue}{HTML}{215CAF}
 \definecolor{ETHBlueDark}{HTML}{123362}
 \definecolor{BlueTint}{HTML}{E7EEF8}
-\definecolor{ETHPetrol}{HTML}{007894}
 \definecolor{PageBg}{HTML}{EAEBEE}     % light cool-grey page
 \definecolor{CardEdge}{HTML}{DEE0E4}
 \definecolor{ETHText}{HTML}{1A1A1A}
@@ -37,7 +35,6 @@
 \definecolor{ETHCaption}{HTML}{707070}
 \definecolor{BarGray}{HTML}{A6ABB2}    % baseline bars
 \definecolor{BarLite}{HTML}{C9CDD3}    % VGGT-only reference
-\definecolor{GainPos}{HTML}{2E7D32}    % small positive accent for deltas
 
 \colorlet{accent}{ETHBlue}
 
@@ -125,7 +122,7 @@
     \vskip0.5cm
     {\color{ETHText}\large David Farah\textsuperscript{1}, Lars Hecker\textsuperscript{1},
       Raman Besenfelder\textsuperscript{1}, Fatemeh Sadat Daneshmand\textsuperscript{2},
-      Elisabetta Fedele\textsuperscript{1}, Pan Linfei\textsuperscript{1}\par}
+      Elisabetta Fedele\textsuperscript{1}, Linfei Pan\textsuperscript{1}\par}
     \vskip0.22cm
     {\color{ETHGrey}\large \textsuperscript{1}ETH Zurich \quad \textsuperscript{2}ZHAW\par}
     \vskip\margin
@@ -220,7 +217,7 @@
     \begin{minipage}[c]{0.47\linewidth}
       \centering
       \includegraphics[width=\linewidth]{figures/superquadrics_3d_clean.png}\\[-0.3ex]
-      \cpt{Fig.\ 1: a scene as 189 super-quadrics + camera poses.}
+      \cpt{Fig.\ 1: scene as 189 super-quadrics (floor hidden) + cameras.}
     \end{minipage}
     \vskip0.7ex
     {\large
@@ -289,18 +286,18 @@
       \centering
       \begin{tikzpicture}
         \begin{axis}[posterchart, width=0.92\linewidth, height=11cm,
-          ybar, bar width=0.44cm, enlarge x limits=0.32,
+          ybar, bar width=0.34cm, enlarge x limits=0.18,
           title={Pose AUC@5 by view count},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
-          symbolic x coords={4,6,8}, xtick=data,
+          symbolic x coords={4,6,8,10}, xtick=data,
           xlabel={Number of input views}, ylabel={AUC@5 ($\%$)},
           ymin=0, ymax=46,
           legend style={font=\scriptsize,at={(0.985,0.985)},anchor=north east,draw=CardEdge,fill=white,fill opacity=0.92,text opacity=1},
           legend cell align=left,
         ]
-          \addplot[fill=BarLite,draw=BarLite!65!black] coordinates {(4,27.7)(6,20.4)(8,13.4)};
-          \addplot[fill=BarGray,draw=BarGray!70!black] coordinates {(4,39.3)(6,29.6)(8,27.9)};
-          \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,40.7)(6,31.1)(8,28.0)};
+          \addplot[fill=BarLite,draw=BarLite!65!black] coordinates {(4,27.7)(6,20.4)(8,13.4)(10,9.3)};
+          \addplot[fill=BarGray,draw=BarGray!70!black] coordinates {(4,39.3)(6,29.6)(8,27.9)(10,29.4)};
+          \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,40.7)(6,31.1)(8,28.0)(10,29.6)};
           \legend{VGGT-only,Baseline (BA),Ours (+ prior)}
         \end{axis}
       \end{tikzpicture}

@@ -50,10 +50,10 @@ def main():
     for i, (eps, lab, sub) in enumerate(PANELS):
         ax = fig.add_subplot(1, len(PANELS), i + 1, projection="3d")
         x, y, z = sq_surface((1, 1, 1), (eps, eps))
-        rgb = ls.shade(z, cmap=plt.get_cmap("Blues"), vmin=z.min() - 0.4, vmax=z.max() + 0.1,
-                       blend_mode="soft")
-        ax.plot_surface(x, y, z, facecolors=rgb, linewidth=0, antialiased=True,
-                        rcount=40, ccount=40, shade=False)
+        # Single base colour with normal-based lighting (consistent across the
+        # whole family; shading by z-height banded the flat-faced low-eps shapes).
+        ax.plot_surface(x, y, z, color=FACE, linewidth=0, antialiased=True,
+                        rcount=60, ccount=60, shade=True, lightsource=ls)
         ax.set_box_aspect((1, 1, 1))
         ax.view_init(elev=22, azim=35)
         ax.set_xlim(-1, 1); ax.set_ylim(-1, 1); ax.set_zlim(-1, 1)

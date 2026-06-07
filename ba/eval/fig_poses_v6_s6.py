@@ -154,11 +154,11 @@ def main():
     for ax in axs:
         ax.set_xlim(allx.min() - mx, allx.max() + mx); ax.set_ylim(ally.min() - my, ally.max() + my)
 
-    handles = [Line2D([0], [0], marker="^", color="w", markerfacecolor=GT_C, markeredgecolor="white", markersize=15, label="ground-truth camera"),
-               Line2D([0], [0], marker="o", color="w", markerfacecolor=PR_C, markeredgecolor="white", markersize=14, label="estimated camera"),
-               Line2D([0], [0], color=DARK, lw=4.0, marker=">", markersize=12, label="camera heading"),
+    # legend arrows use the SAME colors as the panels (green = GT, red = estimate)
+    handles = [Line2D([0], [0], color=GT_C, lw=4.0, marker=">", markersize=12, label="ground-truth camera (pose + heading)"),
+               Line2D([0], [0], color=PR_C, lw=4.0, marker=">", markersize=12, label="estimated camera (pose + heading)"),
                Line2D([0], [0], color="#C3C7CD", lw=2.6, label="position error")]
-    fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
+    fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=16, frameon=False, bbox_to_anchor=(0.5, -0.01))
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(OUT, dpi=150, bbox_inches="tight", facecolor="white")
     print(f"wrote {OUT}")
