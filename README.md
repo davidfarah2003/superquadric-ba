@@ -96,6 +96,39 @@ $$
 where $F$ is the inside-outside function of the super-quadric nearest to point
 $X_j$ and $\lambda$ is the prior weight.
 
+## Dataset and data handling
+
+We evaluate on **Aria Synthetic Environments (ASE)**, a set of synthetic indoor
+scenes from Project Aria with ground-truth camera poses, depth, and per-object
+instance masks. We use 10 scenes.
+
+The data pipeline (all in `compose/`) is, per scene:
+
+1. **Download and convert.** ASE scenes are downloaded and converted to the WAI
+   format (undistorted pinhole RGB, depth, instances, and poses). WAI is the
+   shared intermediate format for both the SuperDec and VGGT pipelines.
+2. **Point clouds.** Depth maps and instance masks are back-projected into
+   per-object point clouds, one cloud per scene object.
+3. **Super-quadric fit (the prior).** SuperDec runs offline on those point
+   clouds and writes one set of super-quadrics per scene
+   (`compose/data/output_npz/ase_scene_N.npz`). Relocalization assumes a *known*
+   environment, so fitting the prior from the scene geometry is part of the
+   setup, not test-time information about the cameras we solve for.
+4. **Covisibility.** For each pair of frames we reproject one view's depth into
+   the other and measure the overlap, giving a pairwise covisibility matrix per
+   scene that drives view selection.
+
+**Evaluation protocol.** From each scene we select a small set of views under a
+covisibility threshold (0.6), so the inputs are sparse and overlap only a little,
+the regime where the prior matters. We sweep the view count over 4, 6, 8, and 10
+and report **pose AUC@5**: the area under the relative-pose accuracy curve up to a
+5 degree error threshold, scaled to 0 to 100 (higher is better), averaged over
+the 10 scenes. The same view selection (fixed seed) feeds the VGGT, baseline, and
+prior runs, so the three configurations are directly comparable.
+
+See `compose/CLAUDE.md` and `compose/docs/project_structure.md` for the full data
+flow and exact commands.
+
 ## Repository layout
 
 This is a single git repository. The code we wrote lives in two packages:
