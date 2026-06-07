@@ -105,6 +105,19 @@ The header (title / authors / affiliations / group) is hand-built in the
 - [ ] Layout knobs: `\margin` / `\gutter` (even frame + column gap), the
       takeaway-band font sizes (`\huge`/`\LARGE`), and `scale=` in the
       `\usepackage[...]{beamerposter}` line (scales all text).
+- [ ] Vertical fill: each column is wrapped in a stretching minipage of height
+      `\colheight` (derived as `\paperheight - 27cm`, i.e. the A1 page minus the
+      fixed header+takeaway+margins), and `\flexgap` is `\vfill`, so the cards
+      spread to fill the page and both columns bottom-align. If you add/remove a
+      card or change the header height, re-check the bottom margin; if a column
+      overflows, nudge the `27cm` up (more top matter) — the page stays A1.
+- [ ] Card padding: rounded beamer blocks have ~no internal padding, so
+      `\cardpad` (0.6 cm) insets every card's body (via an `\addtobeamertemplate`
+      minipage) and its title, giving uniform breathing room without changing the
+      card's outer width.
+- [ ] **Print size:** the poster is true **A1 portrait** (`size=a1`,
+      594 x 841 mm, one page) — confirm with `pdfinfo poster.pdf` (Page size
+      `1683.78 x 2383.94 pts`) before sending to print.
 
 ## Where the content comes from (and how to regenerate it)
 

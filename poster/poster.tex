@@ -48,7 +48,10 @@
 \setlength{\columnsep}{\gutter}
 \newlength{\colwidth}
 \setlength{\colwidth}{\dimexpr0.5\paperwidth-\margin-0.5\gutter\relax}
-\newlength{\colheight}\setlength{\colheight}{57cm}   % target height: columns fill the page
+% Target column height = the real A1 page height minus the fixed top matter
+% (header card + takeaway band + margins) and the bottom margin. Derived from
+% \paperheight so the layout stays correct for the ETH A1 print size.
+\newlength{\colheight}\setlength{\colheight}{\dimexpr\paperheight-27cm\relax}
 \newcommand{\flexgap}{\vfill}   % flexible gap: distributes slack so columns fill the page
 
 %------------------------------------------------------------------ canvas
@@ -64,13 +67,25 @@
 \setbeamerfont{block title}{series=\bfseries,size=\LARGE}
 \setbeamerfont{block body}{size=\large}
 
+% Rounded blocks have ~no internal padding (content touches the card edge).
+% Inset the body inside a padded minipage and nudge the title in, so every card
+% breathes uniformly without changing the card's outer width.
+\newlength{\cardpad}\setlength{\cardpad}{0.6cm}
+\addtobeamertemplate{block begin}{}{%
+  \par\vskip0.34cm\noindent\hspace*{\cardpad}%
+  \begin{minipage}[t]{\dimexpr\linewidth-2\cardpad\relax}%
+}
+\addtobeamertemplate{block end}{%
+  \end{minipage}\par\vskip0.36cm%
+}{}
+
 % numbered sections: blue circled number + dark title, in the tinted strip
 \newcounter{secno}
 \newcommand{\secbadge}[1]{\tikz[baseline=(c.base)]{\node[circle,fill=ETHBlue,
   text=white,inner sep=0pt,minimum size=1.15em,font=\bfseries](c){#1};}}
 \newenvironment{psection}[1]{%
   \stepcounter{secno}%
-  \begin{block}{\secbadge{\thesecno}\hskip0.5em #1}%
+  \begin{block}{\hspace*{\cardpad}\secbadge{\thesecno}\hskip0.5em #1}%
 }{\end{block}}
 
 \setbeamertemplate{itemize item}{\color{accent}\raise0.12ex\hbox{\small$\blacksquare$}}
@@ -94,14 +109,16 @@
 
 %------------------------------------------------------------------ header card
 \setbeamercolor{headbox}{bg=white,fg=ETHText}
+% usable content width inside the header box (box width minus the 1cm sep each side)
+\newlength{\headw}\setlength{\headw}{\dimexpr\paperwidth-2\margin-2cm\relax}
 \setbeamertemplate{headline}{%
   \vskip\margin
   \begin{centering}
   \begin{beamercolorbox}[wd=\dimexpr\paperwidth-2\margin\relax,rounded=true,sep=1.0cm]{headbox}
-    \begin{minipage}[c]{0.46\textwidth}
-      \includegraphics[height=2.5cm]{figures/eth_logo.png}
-    \end{minipage}\hfill
-    \begin{minipage}[c]{0.46\textwidth}
+    \begin{minipage}[b]{0.6\headw}
+      \includegraphics[height=2.7cm]{figures/eth_logo.png}
+    \end{minipage}%
+    \begin{minipage}[b]{0.4\headw}
       \raggedleft\normalsize\color{ETHGrey}Computer Vision and Geometry Group, ETH Zurich
     \end{minipage}\\[0.7cm]
     {\color{ETHText}\veryHuge\textbf{Improving relocalization accuracy}\\[2mm]
@@ -220,7 +237,7 @@
 
   \flexgap
 
-  \begin{block}{References \& Code}
+  \begin{block}{\hspace*{\cardpad}References \& Code}
     \begin{minipage}[c]{0.80\linewidth}
     {\footnotesize\setlength{\parindent}{0pt}\setlength{\emergencystretch}{8em}\raggedright\sloppy
     \hyphenation{Map-Any-thing Feed-For-ward Re-con-struc-tion}
