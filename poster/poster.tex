@@ -65,7 +65,7 @@
 \setbeamercolor{block title}{fg=ETHBlueDark,bg=BlueTint}
 \setbeamercolor{block body}{fg=ETHText,bg=white}
 \setbeamerfont{block title}{series=\bfseries,size=\LARGE}
-\setbeamerfont{block body}{size={\fontsize{25}{30}\selectfont}}
+\setbeamerfont{block body}{size={\fontsize{23}{33}\selectfont}}
 
 % Rounded blocks have ~no internal padding (content touches the card edge).
 % Inset the body inside a padded minipage and nudge the title in, so every card
@@ -137,17 +137,19 @@
 \begin{document}
 \begin{frame}[t]
 
+\vspace*{0.8cm}   % breathing room between the header band and the takeaway box
+
 %---------------------------------------------------------------- TAKEAWAY BAND
 {\centering
 \begin{beamercolorbox}[wd=\textwidth,sep=0pt,center]{}
   \begin{tikzpicture}
-    \node[rounded corners=10pt,fill=ETHBlue,text=white,inner sep=0.7cm,
-          text width=\dimexpr\textwidth-1.4cm\relax,align=center] {
-      {\huge\bfseries A super-quadric environment prior, added on top of bundle
-       adjustment, improves camera-pose accuracy. The gain is largest when views
-       are sparse and barely overlap.}\\[4mm]
-      {\LARGE \textbf{+1.5} AUC@5 at 6 views (up to \textbf{+2.0} at 4).
-       Only +0.2 once 10 views already pin the geometry.}
+    \node[rounded corners=10pt,fill=ETHBlue,text=white,inner sep=0.85cm,
+          text width=\dimexpr\textwidth-1.7cm\relax,align=center] {
+      {\fontsize{36}{50}\selectfont\bfseries A super-quadric environment prior,
+       added on top of bundle adjustment, improves camera-pose accuracy. The gain
+       is largest when views are sparse and barely overlap.}\\[6mm]
+      {\fontsize{28}{38}\selectfont \textbf{+1.5} AUC@5 at 6 views (up to
+       \textbf{+2.0} at 4). Only +0.2 once 10 views already pin the geometry.}
     };
   \end{tikzpicture}
 \end{beamercolorbox}\par}
@@ -286,7 +288,7 @@
     \begin{minipage}[t]{0.5\linewidth}
       \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.92\linewidth, height=12.5cm,
+        \begin{axis}[posterchart, width=0.92\linewidth, height=11cm,
           ybar, bar width=0.44cm, enlarge x limits=0.32,
           title={Pose AUC@5 by view count},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
@@ -306,7 +308,7 @@
     \begin{minipage}[t]{0.47\linewidth}
       \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.88\linewidth, height=12.5cm,
+        \begin{axis}[posterchart, width=0.88\linewidth, height=11cm,
           ybar, bar width=0.76cm, enlarge x limits=0.18,
           title={Gain from the prior ($\Delta$AUC@5)},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},

@@ -65,3 +65,11 @@ data/
 # Generated diagnostic figures + data (regenerable from ba/eval/analyze_*.py;
 # findings are recorded in ba/eval/EXPERIMENTS.md)
 /ba/eval/analysis/
+
+# =============================================================================
+# Oversized / stray files (kept on disk, never in git)
+# =============================================================================
+# 109 MB ATEK download-URL manifest — exceeds GitHub's 100 MB limit, regenerable
+/compose/AriaSyntheticEnvironment_ATEK_download_urls.json
+# Stray LaTeX build log
+/texput.log
