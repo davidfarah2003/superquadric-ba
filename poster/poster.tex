@@ -148,8 +148,8 @@
       {\fontsize{36}{50}\selectfont\bfseries A super-quadric environment prior,
        added on top of bundle adjustment, improves camera-pose accuracy. The gain
        is largest when views are sparse and barely overlap.}\\[6mm]
-      {\fontsize{28}{38}\selectfont \textbf{+1.5} AUC@5 at 6 views (up to
-       \textbf{+2.0} at 4). Only +0.2 once 10 views already pin the geometry.}
+      {\fontsize{28}{38}\selectfont \textbf{+1.5} AUC@5 at 6 views, \textbf{+1.3}
+       at 4. Only +0.2 once 10 views already pin the geometry.}
     };
   \end{tikzpicture}
 \end{beamercolorbox}\par}
@@ -207,7 +207,7 @@
   \begin{psection}{The Environment Prior}
     \centering
     \includegraphics[width=\linewidth]{figures/superquadric_family.png}\\[-0.2ex]
-    \cpt{A super-quadric is one shape family. Two exponents set its roundness,
+    \cpt{A super-quadric is one shape family. An exponent sets its roundness,
       three half-extents set its size, and a pose places it, so a handful tile a room.}
     \vskip0.7ex
     \raggedright
@@ -264,7 +264,7 @@
       \item \textbf{Models:} VGGT for feed-forward poses (via MapAnything [2]),
             MASt3R for matching [3]; SuperDec [4] for the prior
       \item \textbf{Optimization:} full triangulation + surface BA in Ceres;
-            \textbf{metric:} pose AUC@5$^\circ$ (higher is better)
+            \textbf{metric:} pose AUC@5 (higher is better)
     \end{itemize}
   \end{psection}
 
@@ -274,7 +274,7 @@
     Three stages: raw VGGT poses, \textbf{bundle adjustment}, then BA $+$
     \textbf{our super-quadric prior}. BA does most of the work (raw VGGT averages
     only $9.3$ AUC@5 at 10 views, $20.4$ at 6). The prior then adds a gain
-    \emph{on top of BA} that grows as views get sparser.
+    \emph{on top of BA} that is largest when views are few.
     \vskip0.8ex
     % ---- qualitative 3-panel pipeline (Sim(3)-aligned, rotation-error badges) ----
     \includegraphics[width=\linewidth]{figures/poses_v6_s6.png}
@@ -310,7 +310,7 @@
       \begin{tikzpicture}
         \begin{axis}[posterchart, width=0.88\linewidth, height=11cm,
           ybar, bar width=0.76cm, enlarge x limits=0.18,
-          title={Gain from the prior ($\Delta$AUC@5)},
+          title={Gain from the prior ($\Delta$ AUC@5)},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
           symbolic x coords={4,6,8,10}, xtick=data,
           xlabel={Number of input views}, ylabel={$\Delta$ AUC@5 (pp)},
@@ -325,9 +325,10 @@
     \end{center}
     \vskip-0.2ex
     \cpt{Left: bundle adjustment (grey) lifts raw VGGT (light), and our prior
-      (blue) adds more as views get sparser. Right: the prior's gain grows from
-      $+0.2$ at 10 views to $+1.5$ at 6 and $+1.3$ at 4 (up to $+2.0$ with light
-      $\lambda$ tuning); at 6 views it helps 3/10 scenes (up to $+9.3$) and hurts none.}
+      (blue) adds more when views are few. Right: the prior's gain is large at
+      4 to 6 views ($+1.3$ and $+1.5$; up to $+2.0$ at 4 with light $\lambda$
+      tuning) but only $+0.1$ to $+0.2$ once 8 to 10 views pin the geometry; at 6
+      views it helps 3/10 scenes (up to $+9.3$) and hurts none.}
   \end{psection}
 
   \flexgap
@@ -337,8 +338,9 @@
     prior adds little ($+0.2$ at 10 views). As views drop and co-visibility
     collapses, reprojection alone under-constrains the geometry. The super-quadric
     surface supplies the missing constraint, recovering up to $+2.0$ AUC@5 at 4
-    views. \textbf{An environment prior encoded as a super-quadric cloud helps
-    relocalization most under sparse, low-covisibility views.}
+    views with light $\lambda$ tuning. \textbf{An environment prior encoded as a
+    super-quadric cloud helps relocalization most under sparse, low co-visibility
+    views.}
   \end{psection}
 
 \end{minipage}
