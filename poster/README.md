@@ -90,7 +90,12 @@ The header (title / authors / affiliations / group) is hand-built in the
 - [x] **Last author name** — set to `Pan Linfei`.
 - [ ] Section content lives in the `psection`/`block` environments in the body;
       section numbers are automatic. The takeaway band is the `tikzpicture`
-      right after `\begin{frame}`.
+      right after `\begin{frame}`. The **Method Overview** is also an inline
+      `tikzpicture`: a left-to-right pipeline (Sparse frames -> VGGT + MASt3R ->
+      Bundle Adjustment -> Camera poses) with the **super-quadric prior** as the
+      one solid-blue "ours" box feeding a `+ surface loss` term into BA from
+      below (blue = our contribution, matching the takeaway band and the Ours
+      bars). Box styles `io`/`proc`/`ours` are defined in that `tikzpicture`.
 - [ ] Figures (all real outputs): `superquadric_family.png` (the "what is a
       super-quadric" explainer) and `superquadrics_3d_clean.png` (Fig 1, the
       scene) in the left column. Results uses two side-by-side `pgfplots` bar

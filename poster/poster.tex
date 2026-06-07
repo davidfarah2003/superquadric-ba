@@ -48,7 +48,8 @@
 \setlength{\columnsep}{\gutter}
 \newlength{\colwidth}
 \setlength{\colwidth}{\dimexpr0.5\paperwidth-\margin-0.5\gutter\relax}
-\newcommand{\flexgap}{\vspace{\gutter}}   % fixed, consistent gap between cards
+\newlength{\colheight}\setlength{\colheight}{57cm}   % target height: columns fill the page
+\newcommand{\flexgap}{\vfill}   % flexible gap: distributes slack so columns fill the page
 
 %------------------------------------------------------------------ canvas
 \usetheme{default}
@@ -143,6 +144,7 @@
 
 %---------------------------------------------------------------- LEFT COLUMN
 \begin{column}{\colwidth}
+\begin{minipage}[t][\colheight][s]{\colwidth}
 
   \begin{psection}{The Problem}
     Relocalization (the ``kidnapped robot'') asks for an accurate camera pose in
@@ -155,25 +157,34 @@
   \flexgap
 
   \begin{psection}{Method Overview}
-    \vskip0.2cm
+    \vskip0.25cm
     \centering
     \begin{tikzpicture}[
-        box/.style={draw=ETHBlue,line width=1.1pt,rounded corners=5pt,fill=white,
-                    minimum height=2.1cm,minimum width=8.8cm,align=center,font=\large},
-        io/.style={box,draw=ETHGrey!60,fill=BlueTint},
-        arr/.style={draw=ETHText,line width=1.4pt,-{Latex[length=4.5mm,width=3.5mm]}},
-        lbl/.style={font=\small\itshape,color=ETHGrey,align=center,fill=white,inner sep=1.5pt}]
-      \node[io]  (frames) at (-5.7,  0.0) {Sparse frames};
-      \node[box] (model)  at (-5.7, -3.2) {VGGT \,+\, MASt3R};
-      \node[io]  (map)    at ( 5.7, -1.6) {World map};
-      \node[box,fill=BlueTint,draw=ETHBlue,line width=1.4pt] (ba) at (0.0,-6.6) {Bundle Adjustment};
-      \node[box] (poses)  at ( 0.0,-9.8) {Camera poses};
+        io/.style={draw=ETHGrey!55,line width=1pt,rounded corners=5pt,fill=BlueTint,
+                   minimum height=1.85cm,minimum width=3.6cm,align=center,font=\large},
+        proc/.style={draw=ETHBlue,line width=1.3pt,rounded corners=5pt,fill=white,
+                     minimum height=1.85cm,minimum width=3.8cm,align=center,font=\large},
+        ours/.style={draw=ETHBlueDark,line width=1.6pt,rounded corners=5pt,fill=ETHBlue,
+                     text=white,minimum height=1.85cm,minimum width=4.7cm,align=center,font=\large},
+        arr/.style={draw=ETHText,line width=1.5pt,-{Latex[length=4mm,width=3mm]}},
+        flow/.style={font=\footnotesize\itshape,color=ETHGrey,align=center,
+                     fill=white,inner sep=2.5pt}]
+      % main spine: feed-forward -> optimize -> output (reads left to right)
+      \node[io]                     (frames) at ( 2.0, 0) {Sparse\\frames};
+      \node[proc,minimum width=4.8cm] (model)  at ( 8.6, 0) {VGGT \,+\, MASt3R};
+      \node[proc]                   (ba)     at (16.5, 0) {Bundle\\Adjustment};
+      \node[io]                     (poses)  at (22.7, 0) {Camera\\poses};
       \draw[arr] (frames) -- (model);
-      \draw[arr] (model)  -- node[lbl,pos=0.5,left=0.5mm] {Pose estimates\\+ correspondences} (ba);
-      \draw[arr] (map)    -- node[lbl,pos=0.5,right=0.5mm] {super-quadric\\loss} (ba);
+      \draw[arr] (model)  -- node[flow] {poses\\+ 2D tracks} (ba);
       \draw[arr] (ba)     -- (poses);
+      % our contribution: super-quadric prior adds a surface term to the BA cost
+      \node[ours] (prior) at (16.5,-3.6) {Super-quadric\\prior};
+      \draw[arr] (prior) -- (ba);
+      \node[font=\footnotesize\itshape,color=ETHBlueDark,anchor=west] at (16.85,-1.8) {$+$ surface loss};
+      \node[font=\footnotesize,color=ETHGrey,align=center,below=1mm of prior]
+            {our addition, from SuperDec on the known scene};
     \end{tikzpicture}
-    \vskip0.2cm
+    \vskip0.1cm
   \end{psection}
 
   \flexgap
@@ -226,9 +237,11 @@
     \end{minipage}
   \end{block}
 
+\end{minipage}
 \end{column}
 %---------------------------------------------------------------- RIGHT COLUMN
 \begin{column}{\colwidth}
+\begin{minipage}[t][\colheight][s]{\colwidth}
 
   \begin{psection}{Setup}
     \begin{itemize}
@@ -250,7 +263,7 @@
     \vskip0.8ex
     % ---- qualitative 3-panel pipeline (Sim(3)-aligned, rotation-error badges) ----
     \includegraphics[width=\linewidth]{figures/poses_v6_s6.png}
-    \cpt{Figure 2: one scene (scene 6, 6 views), cameras Sim(3)-aligned to ground
+    \cpt{Fig.\ 2: one scene (scene 6, 6 views), cameras Sim(3)-aligned to ground
       truth for display. Estimated headings (red) move toward ground truth (green) as
       bundle adjustment, then the prior, are added. Mean rotation error
       $20^\circ\!\to\!10^\circ\!\to\!2^\circ$ (pose AUC@5 $29\to48\to\mathbf{57}$).}
@@ -286,19 +299,20 @@
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
           symbolic x coords={4,6,8,10}, xtick=data,
           xlabel={Number of input views}, ylabel={$\Delta$ AUC@5 (pp)},
-          ymin=0, ymax=1.85, clip=false,
+          ymin=0, ymax=1.85, ytick={0,0.5,1,1.5}, clip=false,
           nodes near coords={\textbf{+\pgfmathprintnumber{\pgfplotspointmeta}}},
           every node near coord/.append style={font=\small,color=ETHBlueDark,/pgf/number format/.cd,fixed,precision=1},
         ]
           \addplot[fill=ETHBlue,draw=ETHBlue!70!black] coordinates {(4,1.3)(6,1.5)(8,0.1)(10,0.2)};
         \end{axis}
       \end{tikzpicture}
-    \end{minipage}\\[0.4ex]
+    \end{minipage}
+    \end{center}
+    \vskip-0.2ex
     \cpt{Left: bundle adjustment (grey) lifts raw VGGT (light), and our prior
       (blue) adds more as views get sparser. Right: the prior's gain grows from
       $+0.2$ at 10 views to $+1.5$ at 6 and $+1.3$ at 4 (up to $+2.0$ with light
       $\lambda$ tuning); at 6 views it helps 3/10 scenes (up to $+9.3$) and hurts none.}
-    \end{center}
   \end{psection}
 
   \flexgap
@@ -312,6 +326,7 @@
     relocalization most under sparse, low-covisibility views.}
   \end{psection}
 
+\end{minipage}
 \end{column}
 \end{columns}
 \end{frame}

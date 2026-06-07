@@ -61,10 +61,9 @@ def main():
         ax.set_title(lab, fontsize=23, fontweight="bold", color=DARK, pad=-2)
         ax.text2D(0.5, -0.02, sub, transform=ax.transAxes, ha="center", va="top",
                   fontsize=17, color="#444444")
-    fig.suptitle("A super-quadric is one shape whose roundness is set by an exponent "
-                 r"$\varepsilon$ — from box to sphere to octahedron",
-                 fontsize=21, fontweight="bold", color=DARK, y=1.02)
-    fig.subplots_adjust(left=0.0, right=1.0, top=0.86, bottom=0.06, wspace=0.0)
+    # No suptitle: the LaTeX caption carries the explanation (avoids a redundant,
+    # em-dashed second caption baked into the image).
+    fig.subplots_adjust(left=0.0, right=1.0, top=0.95, bottom=0.06, wspace=0.0)
     fig.savefig(OUT, dpi=150, bbox_inches="tight", facecolor="white")
     print(f"wrote {OUT}")
 
