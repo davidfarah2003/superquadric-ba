@@ -7,6 +7,11 @@ views are sparse and barely overlap.
 3D Vision course project (252-0579-00L, Spring 2026), Computer Vision and
 Geometry Group, ETH Zurich.
 
+<p align="center">
+  <img src="poster/figures/poses_v6_s6.png" width="100%"><br>
+  <sub>Estimated cameras (red) move toward ground truth (green) as bundle adjustment, then the super-quadric prior, are added. One scene, 6 views; mean rotation error 20° to 10° to 2°.</sub>
+</p>
+
 ---
 
 ## Overview
@@ -45,12 +50,14 @@ constraint.
 
 ## How it works
 
-```
-Sparse frames ->  VGGT + MASt3R  ->  Bundle Adjustment  ->  Camera poses
-                                            ^
-                                            |  + surface loss
-                                     Super-quadric prior
-                                  (SuperDec on the known scene)
+```mermaid
+flowchart LR
+    A[Sparse frames] --> B[VGGT + MASt3R]
+    B -->|poses + 2D tracks| C[Bundle Adjustment]
+    C --> D[Camera poses]
+    P["Super-quadric prior<br/>(SuperDec, offline)"] -->|+ surface loss| C
+    classDef ours fill:#215CAF,stroke:#123362,color:#ffffff;
+    class P ours;
 ```
 
 1. **Feed-forward poses and depth.** VGGT (run through the MapAnything wrapper)
@@ -68,16 +75,26 @@ Sparse frames ->  VGGT + MASt3R  ->  Bundle Adjustment  ->  Camera poses
    to their nearest primitive every few iterations, after a short
    reprojection-only warm-up.
 
+<p align="center">
+  <img src="poster/figures/superquadric_family.png" width="92%"><br>
+  <sub>One super-quadric swept through its roundness exponent: a single family covers cuboids, spheres, and octahedra. A handful of them tile a room.</sub>
+</p>
+
+<p align="center">
+  <img src="poster/figures/superquadrics_3d_clean.png" width="55%"><br>
+  <sub>A scene decomposed into super-quadrics (floor hidden), with the camera poses (red) we solve for.</sub>
+</p>
+
 The full objective is the reprojection term plus the weighted one-sided surface
 term:
 
-```
-E = sum_ij  rho( || pi(R_i, t_i, X_j) - x_ij ||^2 )           (reprojection)
-  + sum_j   ( lambda * ||q_j|| * max(0, 1 - F(q_j)^(-eps1/2)) )^2 (surface prior)
-```
+$$
+E = \underbrace{\sum_{i,j}\rho\!\left(\lVert \pi(R_i,t_i,X_j)-x_{ij}\rVert^2\right)}_{\text{reprojection}}
+\;+\; \underbrace{\sum_{j}\left(\lambda\,\lVert q_j\rVert\,\max\!\left(0,\,1-F(q_j)^{-\varepsilon_1/2}\right)\right)^2}_{\text{surface prior}}
+$$
 
-where `F` is the inside-outside function of the super-quadric nearest to point
-`X_j` and `lambda` is the prior weight.
+where $F$ is the inside-outside function of the super-quadric nearest to point
+$X_j$ and $\lambda$ is the prior weight.
 
 ## Repository layout
 
