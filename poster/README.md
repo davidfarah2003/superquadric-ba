@@ -3,8 +3,8 @@
 A1 **portrait** scientific poster for the 3D Vision final poster session
 (HG D-Nord, 11 June 2026). Built with `beamerposter`: a **light** theme — light-grey
 page, white rounded content cards, **ETH-Blue** (`#215CAF`) accents, numbered
-section badges, black **ETH zürich** wordmark top-left, group name top-right,
-and two bottom-aligned columns.
+section badges, a full-width white header band with the **ETH zürich** wordmark,
+group name, title and authors all centred, and two bottom-aligned columns.
 
 Layout follows a "Better Poster" hybrid (scan-first, evidence-based): a
 **full-width plain-language takeaway band** sits directly under the title as the
@@ -111,6 +111,13 @@ The header (title / authors / affiliations / group) is hand-built in the
       spread to fill the page and both columns bottom-align. If you add/remove a
       card or change the header height, re-check the bottom margin; if a column
       overflows, nudge the `27cm` up (more top matter) — the page stays A1.
+- [ ] Avoiding airy gaps: `\flexgap` distributes *leftover* space into the gaps,
+      so the way to tight gaps is **more card content**, not smaller `\colheight`
+      (shrinking it just dumps the slack into the bottom margin). The levers used:
+      body text size (`block body` font, set via an explicit
+      `\fontsize{25}{30}` — note `size=\LARGE` silently no-ops here, so use
+      `\fontsize`), the two result charts' `height=`, and the Method-Overview
+      diagram's box heights / prior offset. The header is full-width and centred.
 - [ ] Card padding: rounded beamer blocks have ~no internal padding, so
       `\cardpad` (0.6 cm) insets every card's body (via an `\addtobeamertemplate`
       minipage) and its title, giving uniform breathing room without changing the

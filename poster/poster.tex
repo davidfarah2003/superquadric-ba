@@ -65,18 +65,18 @@
 \setbeamercolor{block title}{fg=ETHBlueDark,bg=BlueTint}
 \setbeamercolor{block body}{fg=ETHText,bg=white}
 \setbeamerfont{block title}{series=\bfseries,size=\LARGE}
-\setbeamerfont{block body}{size=\large}
+\setbeamerfont{block body}{size={\fontsize{25}{30}\selectfont}}
 
 % Rounded blocks have ~no internal padding (content touches the card edge).
 % Inset the body inside a padded minipage and nudge the title in, so every card
 % breathes uniformly without changing the card's outer width.
 \newlength{\cardpad}\setlength{\cardpad}{0.6cm}
 \addtobeamertemplate{block begin}{}{%
-  \par\vskip0.34cm\noindent\hspace*{\cardpad}%
+  \par\vskip0.42cm\noindent\hspace*{\cardpad}%
   \begin{minipage}[t]{\dimexpr\linewidth-2\cardpad\relax}%
 }
 \addtobeamertemplate{block end}{%
-  \end{minipage}\par\vskip0.36cm%
+  \end{minipage}\par\vskip0.46cm%
 }{}
 
 % numbered sections: blue circled number + dark title, in the tinted strip
@@ -107,33 +107,29 @@
   }
 }
 
-%------------------------------------------------------------------ header card
+%------------------------------------------------------------------ header band
+% Full-width white band across the whole top (flush to the page edges), with all
+% header content centred.
 \setbeamercolor{headbox}{bg=white,fg=ETHText}
-% usable content width inside the header box (box width minus the 1cm sep each side)
-\newlength{\headw}\setlength{\headw}{\dimexpr\paperwidth-2\margin-2cm\relax}
 \setbeamertemplate{headline}{%
-  \vskip\margin
-  \begin{centering}
-  \begin{beamercolorbox}[wd=\dimexpr\paperwidth-2\margin\relax,rounded=true,sep=1.0cm]{headbox}
-    \begin{minipage}[b]{0.6\headw}
-      \includegraphics[height=2.7cm]{figures/eth_logo.png}
-    \end{minipage}%
-    \begin{minipage}[b]{0.4\headw}
-      \raggedleft\normalsize\color{ETHGrey}Computer Vision and Geometry Group, ETH Zurich
-    \end{minipage}\\[0.7cm]
+  \begin{beamercolorbox}[wd=\paperwidth,sep=0pt]{headbox}%
+    \vskip\margin
+    \centering
+    \includegraphics[height=2.8cm]{figures/eth_logo.png}\\[0.32cm]
+    {\normalsize\color{ETHGrey}Computer Vision and Geometry Group, ETH Zurich\par}
+    \vskip0.5cm
     {\color{ETHText}\veryHuge\textbf{Improving relocalization accuracy}\\[2mm]
      \textbf{via environment prior}\par}
     \vskip0.55cm
-    {\color{ETHBlue}\rule{\dimexpr\paperwidth-2\margin-2cm\relax}{3pt}}
+    {\color{ETHBlue}\rule{\dimexpr\paperwidth-2\margin\relax}{3pt}}
     \vskip0.5cm
-    {\color{ETHText}\large Lars Hecker\textsuperscript{1}, Raman Besenfelder\textsuperscript{1},
-      David Farah\textsuperscript{1}, Fatemeh Sadat Daneshmand\textsuperscript{2},
+    {\color{ETHText}\large David Farah\textsuperscript{1}, Lars Hecker\textsuperscript{1},
+      Raman Besenfelder\textsuperscript{1}, Fatemeh Sadat Daneshmand\textsuperscript{2},
       Elisabetta Fedele\textsuperscript{1}, Pan Linfei\textsuperscript{1}\par}
     \vskip0.22cm
     {\color{ETHGrey}\large \textsuperscript{1}ETH Zurich \quad \textsuperscript{2}ZHAW\par}
-  \end{beamercolorbox}
-  \end{centering}
-  \vskip\margin
+    \vskip\margin
+  \end{beamercolorbox}%
 }
 \setbeamertemplate{footline}{\vskip\margin}
 
@@ -178,11 +174,11 @@
     \centering
     \begin{tikzpicture}[
         io/.style={draw=ETHGrey!55,line width=1pt,rounded corners=5pt,fill=BlueTint,
-                   minimum height=1.85cm,minimum width=3.6cm,align=center,font=\large},
+                   minimum height=2.2cm,minimum width=3.6cm,align=center,font=\large},
         proc/.style={draw=ETHBlue,line width=1.3pt,rounded corners=5pt,fill=white,
-                     minimum height=1.85cm,minimum width=3.8cm,align=center,font=\large},
+                     minimum height=2.2cm,minimum width=3.8cm,align=center,font=\large},
         ours/.style={draw=ETHBlueDark,line width=1.6pt,rounded corners=5pt,fill=ETHBlue,
-                     text=white,minimum height=1.85cm,minimum width=4.7cm,align=center,font=\large},
+                     text=white,minimum height=2.2cm,minimum width=4.7cm,align=center,font=\large},
         arr/.style={draw=ETHText,line width=1.5pt,-{Latex[length=4mm,width=3mm]}},
         flow/.style={font=\footnotesize\itshape,color=ETHGrey,align=center,
                      fill=white,inner sep=2.5pt}]
@@ -195,9 +191,9 @@
       \draw[arr] (model)  -- node[flow] {poses\\+ 2D tracks} (ba);
       \draw[arr] (ba)     -- (poses);
       % our contribution: super-quadric prior adds a surface term to the BA cost
-      \node[ours] (prior) at (16.5,-3.6) {Super-quadric\\prior};
+      \node[ours] (prior) at (16.5,-5.2) {Super-quadric\\prior};
       \draw[arr] (prior) -- (ba);
-      \node[font=\footnotesize\itshape,color=ETHBlueDark,anchor=west] at (16.85,-1.8) {$+$ surface loss};
+      \node[font=\footnotesize\itshape,color=ETHBlueDark,anchor=west] at (16.85,-2.6) {$+$ surface loss};
       \node[font=\footnotesize,color=ETHGrey,align=center,below=1mm of prior]
             {our addition, from SuperDec on the known scene};
     \end{tikzpicture}
@@ -213,13 +209,13 @@
       three half-extents set its size, and a pose places it, so a handful tile a room.}
     \vskip0.7ex
     \raggedright
-    \begin{minipage}[c]{0.55\linewidth}
+    \begin{minipage}[c]{0.49\linewidth}
       SuperDec [4] fits a compact set of \textbf{super-quadrics} to the scene
       point cloud (right). During BA, a one-sided point-to-quadric term pulls
       each triangulated point toward its nearest primitive, with EM-style
       re-association every few iterations:
     \end{minipage}\hfill
-    \begin{minipage}[c]{0.41\linewidth}
+    \begin{minipage}[c]{0.47\linewidth}
       \centering
       \includegraphics[width=\linewidth]{figures/superquadrics_3d_clean.png}\\[-0.3ex]
       \cpt{Fig.\ 1: a scene as 189 super-quadrics + camera poses.}
@@ -290,7 +286,7 @@
     \begin{minipage}[t]{0.5\linewidth}
       \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.92\linewidth, height=9cm,
+        \begin{axis}[posterchart, width=0.92\linewidth, height=12.5cm,
           ybar, bar width=0.44cm, enlarge x limits=0.32,
           title={Pose AUC@5 by view count},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
@@ -310,7 +306,7 @@
     \begin{minipage}[t]{0.47\linewidth}
       \centering
       \begin{tikzpicture}
-        \begin{axis}[posterchart, width=0.88\linewidth, height=9cm,
+        \begin{axis}[posterchart, width=0.88\linewidth, height=12.5cm,
           ybar, bar width=0.76cm, enlarge x limits=0.18,
           title={Gain from the prior ($\Delta$AUC@5)},
           title style={font=\small\bfseries,color=ETHBlueDark,yshift=1mm},
