@@ -1,0 +1,131 @@
+\begin{thebibliography}{20}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Alpher(2002)]{Alpher02}
+FirstName Alpher.
+\newblock Frobnication.
+\newblock \emph{IEEE TPAMI}, 12\penalty0 (1):\penalty0 234--778, 2002.
+
+\bibitem[Alpher and Fotheringham-Smythe(2003)]{Alpher03}
+FirstName Alpher and FirstName Fotheringham-Smythe.
+\newblock Frobnication revisited.
+\newblock \emph{Journal of Foo}, 13\penalty0 (1):\penalty0 234--778, 2003.
+
+\bibitem[Alpher and Gamow(2005)]{Alpher05}
+FirstName Alpher and FirstName Gamow.
+\newblock Can a computer frobnicate?
+\newblock In \emph{CVPR}, pages 234--778, 2005.
+
+\bibitem[Alpher et~al.(2004)Alpher, Fotheringham-Smythe, and Gamow]{Alpher04}
+FirstName Alpher, FirstName Fotheringham-Smythe, and FirstName Gamow.
+\newblock Can a machine frobnicate?
+\newblock \emph{Journal of Foo}, 14\penalty0 (1):\penalty0 234--778, 2004.
+
+\bibitem[Avetisyan et~al.(2024)Avetisyan, Xie, Howard-Jenkins, Yang, Aroudj,
+  Patra, Zhang, Frost, Holland, Orme, Engel, Miller, Newcombe, and
+  Balntas]{avetisyan2024scenescriptreconstructingscenesautoregressive}
+Armen Avetisyan, Christopher Xie, Henry Howard-Jenkins, Tsun-Yi Yang, Samir
+  Aroudj, Suvam Patra, Fuyang Zhang, Duncan Frost, Luke Holland, Campbell Orme,
+  Jakob Engel, Edward Miller, Richard Newcombe, and Vasileios Balntas.
+\newblock Scenescript: Reconstructing scenes with an autoregressive structured
+  language model, 2024.
+
+\bibitem[Barr(1981)]{1673799}
+Barr.
+\newblock Superquadrics and angle-preserving transformations.
+\newblock \emph{IEEE Computer Graphics and Applications}, 1\penalty0
+  (1):\penalty0 11--23, 1981.
+
+\bibitem[Fedele et~al.(2026)Fedele, Sun, Guibas, Pollefeys, and
+  Engelmann]{fedele2026superdec3dscenedecomposition}
+Elisabetta Fedele, Boyang Sun, Leonidas Guibas, Marc Pollefeys, and Francis
+  Engelmann.
+\newblock Superdec: 3d scene decomposition with superquadric primitives, 2026.
+
+\bibitem[Hartley and Zisserman(2003)]{Hartley2003}
+Richard Hartley and Andrew Zisserman.
+\newblock \emph{Multiple View Geometry in Computer Vision}.
+\newblock Cambridge University Press, New York, NY, USA, 2 edition, 2003.
+
+\bibitem[Keetha et~al.(2026)Keetha, Müller, Schönberger, Porzi, Zhang,
+  Fischer, Knapitsch, Zauss, Weber, Antunes, Luiten, Lopez-Antequera, Bulò,
+  Richardt, Ramanan, Scherer, and
+  Kontschieder]{keetha2026mapanythinguniversalfeedforwardmetric}
+Nikhil Keetha, Norman Müller, Johannes Schönberger, Lorenzo Porzi, Yuchen
+  Zhang, Tobias Fischer, Arno Knapitsch, Duncan Zauss, Ethan Weber, Nelson
+  Antunes, Jonathon Luiten, Manuel Lopez-Antequera, Samuel~Rota Bulò,
+  Christian Richardt, Deva Ramanan, Sebastian Scherer, and Peter Kontschieder.
+\newblock Mapanything: Universal feed-forward metric 3d reconstruction, 2026.
+
+\bibitem[LastName(2014{\natexlab{a}})]{Authors14}
+FirstName LastName.
+\newblock The frobnicatable foo filter, 2014{\natexlab{a}}.
+\newblock Face and Gesture submission ID 324. Supplied as supplemental material
+  {\tt fg324.pdf}.
+
+\bibitem[LastName(2014{\natexlab{b}})]{Authors14b}
+FirstName LastName.
+\newblock Frobnication tutorial, 2014{\natexlab{b}}.
+\newblock Supplied as supplemental material {\tt tr.pdf}.
+
+\bibitem[Leroy et~al.(2024)Leroy, Cabon, and
+  Revaud]{leroy2024groundingimagematching3d}
+Vincent Leroy, Yohann Cabon, and Jérôme Revaud.
+\newblock Grounding image matching in 3d with mast3r, 2024.
+
+\bibitem[Lowe(2004)]{Lowe:2004:DIF:993451.996342}
+David~G. Lowe.
+\newblock Distinctive image features from scale-invariant keypoints.
+\newblock \emph{Int. J. Comput. Vision}, 60\penalty0 (2):\penalty0 91--110,
+  2004.
+
+\bibitem[Paschalidou et~al.(2019)Paschalidou, Ulusoy, and
+  Geiger]{Paschalidou2019CVPR}
+Despoina Paschalidou, Ali~Osman Ulusoy, and Andreas Geiger.
+\newblock Superquadrics revisited: Learning 3d shape parsing beyond cuboids.
+\newblock In \emph{Proceedings IEEE Conf. on Computer Vision and Pattern
+  Recognition (CVPR)}, 2019.
+
+\bibitem[Sch\"{o}nberger and Frahm(2016)]{schoenberger2016sfm}
+Johannes~Lutz Sch\"{o}nberger and Jan-Michael Frahm.
+\newblock Structure-from-motion revisited.
+\newblock In \emph{Conference on Computer Vision and Pattern Recognition
+  (CVPR)}, 2016.
+
+\bibitem[Solina and Bajcsy(1990)]{article}
+Franc Solina and Ruzena Bajcsy.
+\newblock Recovery of parametric models from range images: The case for
+  superquadrics with global deformations.
+\newblock \emph{IEEE Transactions on Pattern Analysis and Machine
+  Intelligence}, 12:\penalty0 131--147, 1990.
+
+\bibitem[Triggs et~al.(2000)Triggs, McLauchlan, Hartley, and
+  Fitzgibbon]{10.1007/3-540-44480-7_21}
+Bill Triggs, Philip~F. McLauchlan, Richard~I. Hartley, and Andrew~W.
+  Fitzgibbon.
+\newblock Bundle adjustment --- a modern synthesis.
+\newblock In \emph{Vision Algorithms: Theory and Practice}, pages 298--372,
+  Berlin, Heidelberg, 2000. Springer Berlin Heidelberg.
+
+\bibitem[Wang et~al.(2025)Wang, Chen, Karaev, Vedaldi, Rupprecht, and
+  Novotny]{wang2025vggtvisualgeometrygrounded}
+Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea Vedaldi, Christian
+  Rupprecht, and David Novotny.
+\newblock Vggt: Visual geometry grounded transformer, 2025.
+
+\bibitem[Wang et~al.(2024)Wang, Leroy, Cabon, Chidlovskii, and
+  Revaud]{wang2024dust3rgeometric3dvision}
+Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris Chidlovskii, and Jerome Revaud.
+\newblock Dust3r: Geometric 3d vision made easy, 2024.
+
+\bibitem[Wang et~al.(2026)Wang, Zhou, Zhu, Chang, Zhou, Li, Chen, Pang, Shen,
+  and He]{wang2026pi3permutationequivariantvisualgeometry}
+Yifan Wang, Jianjun Zhou, Haoyi Zhu, Wenzheng Chang, Yang Zhou, Zizun Li, Junyi
+  Chen, Jiangmiao Pang, Chunhua Shen, and Tong He.
+\newblock $\pi^3$: Permutation-equivariant visual geometry learning, 2026.
+
+\end{thebibliography}

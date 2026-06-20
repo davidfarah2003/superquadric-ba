@@ -1,0 +1,80 @@
+% 3DV 2025 Paper Template; see https://github.com/cvpr-org/author-kit
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+% \usepackage{cvpr}              % To produce the CAMERA-READY version
+\usepackage[final]{cvpr}      % To produce the REVIEW version
+% \usepackage[pagenumbers]{cvpr} % To force page numbers, e.g. for an arXiv version
+
+% Import additional packages in the preamble file, before hyperref
+\input{preamble}
+
+% It is strongly recommended to use hyperref, especially for the review version.
+% hyperref with option pagebackref eases the reviewers' job.
+% Please disable hyperref *only* if you encounter grave issues, 
+% e.g. with the file validation for the camera-ready version.
+%
+% If you comment hyperref and then uncomment it, you should delete *.aux before re-running LaTeX.
+% (Or just hit 'q' on the first LaTeX run, let it finish, and you should be clear).
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,citecolor=cvprblue]{hyperref}
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\paperID{*****} % *** Enter the Paper ID here
+\def\confName{3DV\xspace}
+\def\confYear{2026\xspace}
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{SuperBundle - Bundle Adjustment with Superquadric Primitives}
+
+%%%%%%%%% AUTHORS - PLEASE UPDATE
+\author{Lars Hecker\\
+ETH Zurich\\
+{\tt\small lhecker@student.ethz.ch}
+% For a paper whose authors are all at the same institution,
+% omit the following lines up until the closing ``}''.
+% Additional authors rand addresses can be added with ``\and'',
+% just like the second author.
+% To save space, use either the email address or home page, not both
+\and
+Raman Besenfelder\\
+ETH Zurich\\
+{\tt\small rbesenfel@student.ethz.ch}
+\and
+David Farah\\
+ETH Zurich\\
+{\tt\small dfarah@ethz.ch}
+\and
+Fatemeh Sadat Daneshmand\\
+ZHAW\\
+{\tt\small Dans@zhaw.ch}
+\and
+Elisabetta Fedele\\
+ETH Zurich\\
+{\tt\small elisabetta.fedele@inf.ethz.ch}
+\and
+Linfei Pan\\
+ETH Zurich\\
+{\tt\small linfei.pan@inf.ethz.ch}
+}
+
+\begin{document}
+\maketitle
+\input{sec/0_abstract}    
+\input{sec/1_intro}
+\input{sec/2_related_works}
+\input{sec/3_method}
+\input{sec/4_results}
+\input{sec/5_discussion}
+\input{sec/t_1_intro}
+\input{sec/t_2_formatting}
+\input{sec/t_3_finalcopy}
+{
+    \small
+    \bibliographystyle{ieeenat_fullname}
+    \bibliography{main}
+}
+\input{sec/X_suppl}
+
+\end{document}

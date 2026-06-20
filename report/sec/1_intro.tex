@@ -1,0 +1,7 @@
+\section{Introduction}
+% Problem formulation
+Reconstructing 3D scenes from multiple camera images is a classical problem in Computer Vision. There are many feed-forward models for predicting camera parameters and point clouds to reconstruct full 3D scenes \cite{wang2025vggtvisualgeometrygrounded, wang2026pi3permutationequivariantvisualgeometry, keetha2026mapanythinguniversalfeedforwardmetric}. However, especially in sparse view settings, camera pose estimates can drift or be imprecise. This comes from the limited overlap of the views, ambiguous geometry, and scale uncertainty. To reduce the prediction error one can use optimization based methods like bundle adjustment \cite{10.1007/3-540-44480-7_21} to refine the reconstructed scenes.
+
+In this project, we improved the camera poses in very sparse view settings with a modified version of the classic bundle adjustment algorithm. We used a superquadric \cite{Paschalidou2019CVPR} representation of our 3D scene as a structural prior, improving the camera pose estimates compared to the classic bundle adjustment. For this, we used the superquadric representation of the Aria Synthetic Environments Dataset\cite{avetisyan2024scenescriptreconstructingscenesautoregressive} generated with Superdec \cite{fedele2026superdec3dscenedecomposition} from the ground truth point clouds.
+
+XXX Add stuff with connection to results and discussion
