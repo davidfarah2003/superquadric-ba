@@ -73,3 +73,9 @@ data/
 /compose/AriaSyntheticEnvironment_ATEK_download_urls.json
 # Stray LaTeX build log
 /texput.log
+
+# =============================================================================
+# Secrets — never commit. Overleaf git token, read by overleaf-credentials.sh
+# (.env.example is the committed template)
+# =============================================================================
+.env
