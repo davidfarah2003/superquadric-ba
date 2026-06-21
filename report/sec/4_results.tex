@@ -1,2 +1,38 @@
 \section{Results}
-% TODO: Results
+% Experimental setup, main pose AUC@5 table, and analysis of where the prior helps.
+
+\paragraph{Experimental setup}
+We evaluate on the Aria Synthetic Environments (ASE) dataset \cite{avetisyan2024scenescriptreconstructingscenesautoregressive}, using ten scenes. For each scene we select sparse view subsets with a covisibility criterion: we precompute a pairwise covisibility matrix from the ground truth depth and keep view sets whose pairwise covisibility meets a threshold of $0.6$. We sweep the number of input views over $4$, $6$, $8$, and $10$ to study how the prior behaves as views become scarcer. The seed is fixed and view selection is deterministic, so the same view sets feed every configuration, and only the post-reconstruction optimization differs.
+
+The superquadric prior is fit offline by SuperDec \cite{fedele2026superdec3dscenedecomposition} on the clean full-scene ground truth point cloud, a known-environment assumption. To use it during optimization we register the world-frame superquadrics into the predicted reconstruction frame with a Sim(3) estimated from ground truth camera centres. This is an idealized known-map setting, not full relocalization: ground truth poses enter the pipeline only to place the prior, and the optimization never sees them as targets.
+
+We report pose AUC@5, the area under the relative-pose accuracy curve up to a $5^{\circ}$ threshold. For every unordered view pair we measure the rotation-angle and translation-direction-angle error between the predicted and ground truth relative poses, take the larger of the two, and accumulate the fraction of pairs below each integer-degree threshold up to $5^{\circ}$. The area under this curve is scaled to $0$--$100$; higher is better. Per-sample values are pooled across all ten scenes and averaged.
+
+We compare three configurations on these fixed view sets. VGGT-only is the raw feed-forward output with no optimization. The BA baseline runs our bundle adjustment with the surface term switched off ($\lambda = 0$), leaving pure Huber reprojection. Ours adds the superquadric surface prior on top of the same reprojection cost. All bundle adjustment runs in Ceres; cameras are initialized from VGGT through the MapAnything harness \cite{wang2025vggtvisualgeometrygrounded, keetha2026mapanythinguniversalfeedforwardmetric}, and 2D--2D correspondences come from MASt3R \cite{leroy2024groundingimagematching3d}, midpoint-triangulated into the world frame before optimization.
+
+\paragraph{Main results}
+Table~\ref{tab:pose_auc} reports pose AUC@5 for the three configurations across the four view counts. Bundle adjustment accounts for almost all of the improvement over raw VGGT: at $10$ views it lifts pose AUC@5 from $9.3$ to $29.4$, and at $4$ views from $27.7$ to $39.3$. The superquadric prior adds a further gain on top of the baseline that is largest in the sparsest settings, $+1.3$ at $4$ views and $+1.5$ at $6$ views, and shrinks to $+0.1$ at $8$ views and $+0.2$ at $10$ views.
+
+\begin{table}[t]
+  \centering
+  \begin{tabular}{l cccc}
+    \toprule
+    & \multicolumn{4}{c}{Pose AUC@5 $\uparrow$ (\# views)} \\
+    \cmidrule(lr){2-5}
+    Configuration & 4 & 6 & 8 & 10 \\
+    \midrule
+    VGGT-only        & 27.7 & 20.4 & 13.4 & \phantom{0}9.3 \\
+    BA baseline      & 39.3 & 29.6 & 27.9 & 29.4$^{\dagger}$ \\
+    Ours (BA + prior) & \textbf{40.7} & \textbf{31.1} & \textbf{28.0} & \textbf{29.6} \\
+    \midrule
+    Gain from prior  & $+1.3$ & $+1.5$ & $+0.1$ & $+0.2$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Pose AUC@5 ($\uparrow$, scaled to $0$--$100$, averaged over the ten ASE scenes) by input view count. VGGT-only is the raw feed-forward output; the BA baseline is reprojection-only bundle adjustment ($\lambda = 0$); Ours adds the superquadric surface prior. The last row is the prior's gain over the baseline. The prior helps most when views are few. At $8$ and $10$ views the baseline already pins the geometry, so the gain is near zero. $^{\dagger}$The $10$-view baseline is our regular reprojection-BA result on the MASt3R backend; we do not have a matched $\lambda = 0$ run at $10$ views, so the $+0.2$ there compares against this bar rather than an exactly matched baseline.}
+  \label{tab:pose_auc}
+\end{table}
+
+\paragraph{Analysis}
+The prior helps where reprojection alone leaves the cameras under-constrained, and tapers off once enough views fix the geometry. With many overlapping views the reprojection term already determines the camera poses, so the surface residual has little left to correct. The sparse case is different. With four or six low-covisibility views the matched structure is thin and the reprojection term is weak. The prior then pulls triangulated points back onto the known scene surfaces, supplying the constraint that is missing.
+
+Sweeping the surface weight per view count tells the same story. At four views the fixed-weight prior gives $+1.3$, but the per-view sweep reaches $+2.0$ at $\lambda = 100$ (baseline $39.3$ versus $41.3$); the sweep is noisy and non-monotonic, with $\lambda = 60$ falling back to the baseline and $\lambda = 200$ dropping again to $40.3$. At six views the prior helps $3$ of the $10$ scenes and hurts none: scene~6 improves by $+9.3$ ($48.0 \to 57.3$), scene~2 by $+4.0$, and scene~9 by $+1.3$, while the other seven scenes are unchanged. So the aggregate six-view gain comes from three scenes, not a shift across all ten. A structural prior only binds where the local geometry is poorly conditioned, so a few badly-conditioned scenes carrying the aggregate gain is the expected behaviour.

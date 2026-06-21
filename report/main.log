@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.28)  20 JUN 2026 11:45
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.10.28)  20 JUN 2026 12:05
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -535,49 +535,54 @@ LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 6
 (/home/dfarah/texmf/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 ) (./sec/0_abstract.tex)
-(./sec/1_intro.tex) (./sec/2_related_works.tex) (./sec/3_method.tex [1{/home/df
-arah/.texlive2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texl
-ive/texmf-dist/fonts/enc/dvips/base/8r.enc}
+(./sec/1_intro.tex) (./sec/2_related_works.tex [1{/home/dfarah/.texlive2023/tex
+mf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-dist/fonts/
+enc/dvips/base/8r.enc}
 
 
-]) (./sec/4_results.tex)
+]) (./sec/3_method.tex [2]) (./sec/4_results.tex [3])
 (./sec/5_discussion.tex) (./main.bbl (./main.brf)
 \tf@brf=\write4
 \openout4 = `main.brf'.
 
-) [2] (./main.aux)
+) [4] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: 369A567E364D39A2795C4F656612E37F;523.
-
-
-Package rerunfilecheck Warning: File `main.brf' has changed.
-(rerunfilecheck)                Rerun to get bibliographical references right.
-
-Package rerunfilecheck Info: Checksums for `main.brf':
-(rerunfilecheck)             Before: D41D8CD98F00B204E9800998ECF8427E;0
-(rerunfilecheck)             After:  87CA7703C44875D1ECEC9996DA6AC489;1184.
+Package rerunfilecheck Info: File `main.brf' has not changed.
+(rerunfilecheck)             Checksum: 36A39A64DF78771B004107795C6F4188;2186.
  ) 
 Here is how much of TeX's memory you used:
- 15099 strings out of 476182
- 249211 string characters out of 5795594
+ 15134 strings out of 476182
+ 249688 string characters out of 5795594
  1947975 words of memory out of 5000000
- 36858 multiletter control sequences out of 15000+600000
- 579205 words of font info for 84 fonts, out of 8000000 for 9000
+ 36877 multiletter control sequences out of 15000+600000
+ 583487 words of font info for 93 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 90i,9n,93p,1290b,452s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr
-/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></home/dfarah
-/texmf/fonts/type1/urw/courier/ucrr8a.pfb></home/dfarah/texmf/fonts/type1/urw/t
-imes/utmb8a.pfb></home/dfarah/texmf/fonts/type1/urw/times/utmr8a.pfb></home/dfa
-rah/texmf/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (2 pages, 81667 bytes).
+ 90i,10n,93p,1365b,453s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/shar
+e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texli
+ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/
+fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/t
+ype1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/
+cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.p
+fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share
+/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/dfarah/texm
+f/fonts/type1/urw/courier/ucrr8a.pfb></home/dfarah/texmf/fonts/type1/urw/times/
+utmb8a.pfb></home/dfarah/texmf/fonts/type1/urw/times/utmr8a.pfb></home/dfarah/t
+exmf/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (4 pages, 217403 bytes).
 PDF statistics:
- 111 PDF objects out of 1000 (max. 8388607)
- 94 compressed objects within 1 object stream
- 26 named destinations out of 1000 (max. 500000)
+ 236 PDF objects out of 1000 (max. 8388607)
+ 192 compressed objects within 2 object streams
+ 40 named destinations out of 1000 (max. 500000)
  41 words of extra memory for PDF output out of 10000 (max. 10000000)
 
